@@ -1,7 +1,8 @@
 import { authService } from "../services/authService.js";
 import { recordService } from "../services/recordService.js";
 import { createDashboardView } from "../ui/dashboardView.js";
-import { createConfirmModal, createWizardModal, getInitialWizardData } from "../ui/modalView.js";
+import { createConfirmModal, createWizardModal, getInitialWizardData, WIZARD_STEPS } from "../ui/modalView.js";
+import { bindChartTooltip } from "../ui/chart.js";
 
 export function createDashboardController({ onLoggedOut }) {
   const state = {
@@ -12,6 +13,11 @@ export function createDashboardController({ onLoggedOut }) {
       range: "7",
       customStart: "",
       customEnd: ""
+    },
+    chartVisibility: {
+      systolic: true,
+      diastolic: true,
+      heartRate: true
     },
     modal: {
       open: false,
@@ -39,11 +45,16 @@ export function createDashboardController({ onLoggedOut }) {
       profile: state.profile,
       records: state.records,
       stats: getStats(),
-      filters: state.filters
+      filters: state.filters,
+      chartVisibility: state.chartVisibility
     });
 
     bindDashboardEvents();
     renderModal();
+
+    // Tooltip interactivo de la grafica
+    const chartContainer = appRoot.querySelector(".chart-container");
+    if (chartContainer) bindChartTooltip(chartContainer);
   }
 
   function renderModal() {
@@ -52,7 +63,6 @@ export function createDashboardController({ onLoggedOut }) {
       return;
     }
 
-    // El wizard y la confirmacion comparten un unico contenedor modal.
     modalRoot.innerHTML = state.modal.confirm
       ? createConfirmModal({
           wizardData: state.modal.data,
@@ -92,10 +102,33 @@ export function createDashboardController({ onLoggedOut }) {
   }
 
   function validateCurrentStep() {
-    const requiredByStep = ["recordDate", "recordTime", "ta", "heartRate", "position"];
-    const currentField = requiredByStep[state.modal.step];
+    const step = WIZARD_STEPS[state.modal.step];
+    if (!step) return;
 
-    if (currentField && !String(state.modal.data[currentField] ?? "").trim()) {
+    if (step.type === "number") {
+      const raw = state.modal.data[step.key];
+      if (raw === "" || raw === null || raw === undefined) {
+        throw new Error(`Ingresa el valor de ${step.title}.`);
+      }
+      const num = Number(raw);
+      if (isNaN(num) || !Number.isFinite(num)) {
+        throw new Error(`${step.title} debe ser un numero valido.`);
+      }
+      if (num < step.min || num > step.max) {
+        throw new Error(`${step.title} debe estar entre ${step.min} y ${step.max}.`);
+      }
+      if (step.key === "taDiastolic") {
+        const sys = Number(state.modal.data.taSystolic);
+        if (num >= sys) {
+          throw new Error("La TA diastolica debe ser menor que la sistolica.");
+        }
+      }
+      return;
+    }
+
+    // Campos de fecha y hora son obligatorios
+    const requiredKeys = ["recordDate", "recordTime"];
+    if (requiredKeys.includes(step.key) && !String(state.modal.data[step.key] ?? "").trim()) {
       throw new Error("Completa el dato actual antes de continuar.");
     }
   }
@@ -108,7 +141,6 @@ export function createDashboardController({ onLoggedOut }) {
     try {
       await recordService.createRecord(state.user.id, state.modal.data);
       await refreshRecords();
-      // Al guardar, la tabla y las estadisticas se recalculan de inmediato.
       closeModal();
       render();
     } catch (error) {
@@ -119,18 +151,49 @@ export function createDashboardController({ onLoggedOut }) {
   }
 
   function bindModalEvents() {
-    const input = modalRoot.querySelector("input, textarea, select");
-    // Cada paso solo tiene un control principal, por eso se puede sincronizar de forma directa.
-    input?.addEventListener("input", (event) => updateWizardField(event.target.id, event.target.value));
-    input?.addEventListener("change", (event) => updateWizardField(event.target.id, event.target.value));
+    // Campos de texto/fecha/hora/select: hay un solo control por paso
+    const input = modalRoot.querySelector("input[type='date'], input[type='time'], select");
+    input?.addEventListener("input", (e) => updateWizardField(e.target.id, e.target.value));
+    input?.addEventListener("change", (e) => updateWizardField(e.target.id, e.target.value));
+
+    // Input numerico grande
+    const numInput = modalRoot.querySelector(".number-input-large");
+    if (numInput) {
+      // Solo permitir digitos (bloquear e, +, -, .)
+      numInput.addEventListener("keydown", (e) => {
+        if (["e", "E", "+", "-", "."].includes(e.key)) e.preventDefault();
+      });
+      numInput.addEventListener("input", (e) => {
+        // Eliminar cualquier caracter no numerico que pudiera pasar
+        const clean = e.target.value.replace(/[^0-9]/g, "");
+        e.target.value = clean;
+        updateWizardField(e.target.id, clean === "" ? "" : Number(clean));
+      });
+    }
+
+    // Radios de observaciones
+    modalRoot.querySelectorAll('input[name="obsPreset"]').forEach((radio) => {
+      radio.addEventListener("change", (e) => {
+        state.modal.data.obsPreset = e.target.value;
+        if (e.target.value !== "Otro") {
+          state.modal.data.observations = e.target.value;
+        } else {
+          state.modal.data.observations = "";
+        }
+        renderModal();
+      });
+    });
+
+    // Textarea "Otro"
+    modalRoot.querySelector("#obsCustom")?.addEventListener("input", (e) => {
+      state.modal.data.observations = e.target.value;
+    });
 
     modalRoot.querySelector("#close-wizard")?.addEventListener("click", closeModal);
 
     modalRoot.querySelector("#wizard-back")?.addEventListener("click", () => {
       state.modal.errorMessage = "";
-      if (state.modal.step > 0) {
-        state.modal.step -= 1;
-      }
+      if (state.modal.step > 0) state.modal.step -= 1;
       renderModal();
     });
 
@@ -139,12 +202,11 @@ export function createDashboardController({ onLoggedOut }) {
         validateCurrentStep();
         state.modal.errorMessage = "";
 
-        if (state.modal.step === 5) {
+        if (state.modal.step === WIZARD_STEPS.length - 1) {
           state.modal.confirm = true;
         } else {
           state.modal.step += 1;
         }
-
         renderModal();
       } catch (error) {
         state.modal.errorMessage = error.message;
@@ -184,6 +246,14 @@ export function createDashboardController({ onLoggedOut }) {
       state.filters.customStart = appRoot.querySelector("#custom-start").value;
       state.filters.customEnd = appRoot.querySelector("#custom-end").value;
       render();
+    });
+
+    // Leyendas interactivas de la grafica
+    appRoot.querySelectorAll(".chart-legend-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        state.chartVisibility[item.dataset.series] = !state.chartVisibility[item.dataset.series];
+        render();
+      });
     });
   }
 

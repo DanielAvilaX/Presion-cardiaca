@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Grafica de evolucion | Tension</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles/main.css" />
+    <style>
+      .chart-full-page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .chart-full-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 20px 0 24px;
+        flex-wrap: wrap;
+      }
+
+      .chart-full-page .chart {
+        height: clamp(340px, 55vh, 600px);
+        border-radius: var(--radius-md);
+      }
+
+      .chart-full-page .chart svg {
+        width: 100%;
+        height: 100%;
+      }
+
+      .chart-range-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      #chart-root {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app-shell chart-full-page">
+      <div class="chart-full-header">
+        <div>
+          <p class="eyebrow">Evolucion</p>
+          <h2 style="margin:0;">Grafica de tension arterial y FC</h2>
+        </div>
+        <div class="chart-range-bar">
+          <select id="range-select-full">
+            <option value="7">Ultimos 7 dias</option>
+            <option value="15">Ultimos 15 dias</option>
+            <option value="30">Ultimo mes</option>
+            <option value="180">Ultimos 6 meses</option>
+            <option value="all" selected>Todos los registros</option>
+          </select>
+          <a href="index.html" class="ghost-button" style="text-decoration:none;">Volver al panel</a>
+        </div>
+      </div>
+      <main id="chart-root"></main>
+    </div>
+    <script type="module" src="./src/chartApp.js"></script>
+  </body>
+</html>

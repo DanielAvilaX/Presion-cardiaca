@@ -16,5 +16,21 @@ export const recordRepository = {
   async createRecord(record) {
     const { error } = await supabase.from("pressure_records").insert(record);
     if (error) throw error;
+  },
+
+  async updateRecord(id, updates) {
+    const { error } = await supabase
+      .from("pressure_records")
+      .update(updates)
+      .eq("id", id);
+    if (error) throw error;
+  },
+
+  async deleteRecord(id) {
+    const { error } = await supabase
+      .from("pressure_records")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
   }
 };

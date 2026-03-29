@@ -16,19 +16,36 @@ export const recordService = {
   },
 
   async createRecord(userId, payload) {
-    // Se valida y transforma la TA antes de persistirla en columnas numericas.
-    const taValues = validateRecordPayload(payload);
+    const validated = validateRecordPayload(payload);
 
     await recordRepository.createRecord({
       user_id: userId,
       record_date: payload.recordDate,
       record_time: payload.recordTime,
-      ta_systolic: taValues.systolic,
-      ta_diastolic: taValues.diastolic,
-      heart_rate: Number(payload.heartRate),
+      ta_systolic: validated.systolic,
+      ta_diastolic: validated.diastolic,
+      heart_rate: validated.heartRate,
       position: payload.position,
       observations: payload.observations?.trim() || null
     });
+  },
+
+  async updateRecord(recordId, payload) {
+    const validated = validateRecordPayload(payload);
+
+    await recordRepository.updateRecord(recordId, {
+      record_date: payload.recordDate,
+      record_time: payload.recordTime,
+      ta_systolic: validated.systolic,
+      ta_diastolic: validated.diastolic,
+      heart_rate: validated.heartRate,
+      position: payload.position,
+      observations: payload.observations?.trim() || null
+    });
+  },
+
+  async deleteRecord(recordId) {
+    await recordRepository.deleteRecord(recordId);
   },
 
   getStats(records, filters) {

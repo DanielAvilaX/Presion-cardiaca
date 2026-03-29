@@ -34,26 +34,29 @@ export function validateRegistration(formData) {
 }
 
 export function validateRecordPayload(payload) {
-  const requiredFields = ["recordDate", "recordTime", "ta", "heartRate", "position"];
+  const systolic = Number(payload.taSystolic);
+  const diastolic = Number(payload.taDiastolic);
+  const heartRate = Number(payload.heartRate);
 
-  for (const field of requiredFields) {
-    if (!String(payload[field] ?? "").trim()) {
-      throw new Error("Completa todos los campos requeridos del registro.");
-    }
+  if (!payload.recordDate || !payload.recordTime || !payload.position) {
+    throw new Error("Completa todos los campos requeridos del registro.");
   }
 
-  const taMatch = payload.ta.match(/^(\d{2,3})\s*\/\s*(\d{2,3})$/);
-
-  if (!taMatch) {
-    throw new Error("La tension arterial debe tener el formato 120/80.");
+  if (systolic <= 0 || systolic > 200) {
+    throw new Error("La TA sistolica debe estar entre 1 y 200 mmHg.");
   }
 
-  if (Number(payload.heartRate) <= 0) {
-    throw new Error("La frecuencia cardiaca debe ser mayor que cero.");
+  if (diastolic <= 0 || diastolic > 120) {
+    throw new Error("La TA diastolica debe estar entre 1 y 120 mmHg.");
   }
 
-  return {
-    systolic: Number(taMatch[1]),
-    diastolic: Number(taMatch[2])
-  };
+  if (diastolic >= systolic) {
+    throw new Error("La TA sistolica debe ser mayor que la diastolica.");
+  }
+
+  if (heartRate <= 0 || heartRate > 120) {
+    throw new Error("La frecuencia cardiaca debe estar entre 1 y 120 lpm.");
+  }
+
+  return { systolic, diastolic, heartRate };
 }

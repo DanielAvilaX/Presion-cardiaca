@@ -5,7 +5,7 @@ function createRows(records) {
   if (!records.length) {
     return `
       <tr>
-        <td colspan="6">
+        <td colspan="7">
           <div class="empty-state">Todavia no tienes registros. Usa el boton de agregar para crear el primero.</div>
         </td>
       </tr>
@@ -22,13 +22,16 @@ function createRows(records) {
           <td>${record.heart_rate}</td>
           <td>${record.position}</td>
           <td>${record.observations ?? "-"}</td>
+          <td>
+            <a href="settings.html?tab=records" class="table-link">Editar / Eliminar</a>
+          </td>
         </tr>
       `
     )
     .join("");
 }
 
-export function createDashboardView({ profile, records, stats, filters }) {
+export function createDashboardView({ profile, records, stats, filters, chartVisibility }) {
   const fullName = `${profile.first_name} ${profile.last_name}`.trim();
   const customRangeVisible = filters.range === "custom" ? "" : "hidden";
 
@@ -41,7 +44,8 @@ export function createDashboardView({ profile, records, stats, filters }) {
           <p class="helper">Consulta tus registros, agrega nuevas mediciones y sigue la evolucion de tus datos.</p>
         </div>
         <div class="range-controls">
-          <button id="open-record-modal" class="button" type="button">Agregar nuevo registro</button>
+          <button id="open-record-modal" class="button" type="button">Agregar registro</button>
+          <a href="settings.html" class="ghost-button" style="text-decoration:none; text-align:center;">Configuracion</a>
           <button id="logout-button" class="ghost-button" type="button">Cerrar sesion</button>
         </div>
       </article>
@@ -89,7 +93,7 @@ export function createDashboardView({ profile, records, stats, filters }) {
             </article>
           </div>
 
-          ${createChartMarkup(stats.filtered)}
+          ${createChartMarkup(stats.filtered, chartVisibility)}
         </article>
 
         <article class="card">
@@ -98,6 +102,7 @@ export function createDashboardView({ profile, records, stats, filters }) {
               <h3>Perfil</h3>
               <p class="helper">Datos asociados a tu cuenta.</p>
             </div>
+            <a href="settings.html" class="ghost-button" style="text-decoration:none; font-size:0.88rem;">Editar perfil</a>
           </div>
           <div class="confirm-list">
             <div><strong>Documento</strong><span>${profile.document_number}</span></div>
@@ -124,6 +129,7 @@ export function createDashboardView({ profile, records, stats, filters }) {
                 <th>FC</th>
                 <th>Posicion</th>
                 <th>Observaciones</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>${createRows(records)}</tbody>
