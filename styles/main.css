@@ -666,15 +666,69 @@ th {
 
   .modal-card--wizard {
     width: 100%;
-    padding: 28px 20px;
+    padding: 32px 24px;
     max-height: 96dvh;
     overflow-y: auto;
   }
 
+  /* Textos del wizard mas grandes en movil */
+  .step-pill {
+    font-size: 1rem;
+    padding: 10px 16px;
+  }
+
+  .wizard-title {
+    font-size: clamp(2rem, 7vw, 2.6rem);
+    margin-bottom: 10px;
+  }
+
+  .wizard-description {
+    font-size: 1.1rem;
+    margin-bottom: 28px;
+  }
+
+  .wizard-actions .button,
+  .wizard-actions .ghost-button,
+  .confirm-actions .button,
+  .confirm-actions .ghost-button {
+    padding: 16px 20px;
+    font-size: 1.05rem;
+  }
+
+  .confirm-list strong,
+  .confirm-list span {
+    font-size: 1rem;
+  }
+
+  .confirm-list div {
+    padding: 6px 0;
+  }
+
   .number-input-large {
-    width: 180px;
-    height: 110px;
-    font-size: 3.8rem;
+    width: 200px;
+    height: 120px;
+    font-size: 4rem;
+  }
+
+  .number-unit {
+    font-size: 1.15rem;
+  }
+
+  /* Select y campos de fecha/hora mas grandes */
+  .wizard-field-wrap .field label {
+    font-size: 1rem;
+  }
+
+  .wizard-field-wrap .field input,
+  .wizard-field-wrap .field select {
+    padding: 16px;
+    font-size: 1.1rem;
+  }
+
+  /* Opciones de observaciones mas grandes */
+  .obs-option {
+    padding: 18px 20px;
+    font-size: 1.1rem;
   }
 
   .chart-legend-bar {

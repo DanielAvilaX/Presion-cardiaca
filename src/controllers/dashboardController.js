@@ -222,6 +222,31 @@ export function createDashboardController({ onLoggedOut }) {
     modalRoot.querySelector("#confirm-submit")?.addEventListener("click", saveRecord);
   }
 
+  function downloadExcel() {
+    const headers = ["Fecha", "Hora", "TA Sistolica (mmHg)", "TA Diastolica (mmHg)", "FC (lpm)", "Posicion", "Observaciones"];
+    const rows = state.records.map((r) => [
+      r.record_date,
+      r.record_time.slice(0, 5),
+      r.ta_systolic,
+      r.ta_diastolic,
+      r.heart_rate,
+      r.position,
+      r.observations ?? ""
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "registros-tension.csv";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function bindDashboardEvents() {
     appRoot.querySelector("#logout-button").addEventListener("click", async () => {
       await authService.logout();
@@ -229,6 +254,8 @@ export function createDashboardController({ onLoggedOut }) {
     });
 
     appRoot.querySelector("#open-record-modal").addEventListener("click", openModal);
+
+    appRoot.querySelector("#download-excel").addEventListener("click", downloadExcel);
 
     appRoot.querySelector("#range-select").addEventListener("change", (event) => {
       state.filters.range = event.target.value;

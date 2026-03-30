@@ -118,6 +118,9 @@ export function createDashboardView({ profile, records, stats, filters, chartVis
             <h3>Tabla de registros</h3>
             <p class="helper">Se muestran todos tus registros, del mas reciente al mas antiguo.</p>
           </div>
+          <button id="download-excel" class="ghost-button" type="button" style="white-space:nowrap; flex-shrink:0;">
+            Descargar Excel
+          </button>
         </div>
         <div class="table-wrapper">
           <table>
