@@ -1,0 +1,38 @@
+.chart-full-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-full-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 0 24px;
+  flex-wrap: wrap;
+}
+
+.chart-full-page .chart {
+  height: clamp(340px, 55vh, 600px);
+  border-radius: var(--radius-md);
+}
+
+.chart-full-page .chart svg {
+  width: 100%;
+  height: 100%;
+}
+
+.chart-range-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+#chart-root {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
