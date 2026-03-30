@@ -3,6 +3,7 @@ import { formatDisplayDate } from "../utils/date.js";
 const CHART_WIDTH = 800;
 const CHART_HEIGHT = 300;
 const PADDING = 48;
+const LABEL_AREA = 72; // espacio extra debajo del eje X para etiquetas rotadas
 
 function buildScaleY(ordered) {
   const allValues = ordered.flatMap((r) => [r.ta_systolic, r.ta_diastolic, r.heart_rate]);
@@ -53,10 +54,11 @@ export function createChartMarkup(records, visibility = { systolic: true, diasto
     `);
   }
 
+  const labelY = CHART_HEIGHT - PADDING + 14;
   const labels = ordered
     .map((rec, i) => {
       const x = getPointX(i, ordered.length);
-      return `<text x="${x}" y="${CHART_HEIGHT - 8}" text-anchor="middle" class="chart-label">${formatDisplayDate(rec.record_date)}</text>`;
+      return `<text x="${x}" y="${labelY}" text-anchor="end" class="chart-label" transform="rotate(-45, ${x}, ${labelY})">${formatDisplayDate(rec.record_date)}</text>`;
     })
     .join("");
 
@@ -107,7 +109,7 @@ export function createChartMarkup(records, visibility = { systolic: true, diasto
   return `
     <div class="chart-container">
       <div class="chart" style="position:relative;">
-        <svg viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT}" role="img" aria-label="Grafica de evolucion">
+        <svg viewBox="0 0 ${CHART_WIDTH} ${CHART_HEIGHT + LABEL_AREA}" role="img" aria-label="Grafica de evolucion">
           <defs>
             <linearGradient id="line-sys" x1="0%" y1="0%" x2="100%" y2="0%">
               <stop offset="0%" stop-color="#ab3b30" /><stop offset="100%" stop-color="#7d261d" />
