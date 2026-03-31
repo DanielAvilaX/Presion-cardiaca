@@ -3,6 +3,7 @@ import { recordService } from "../services/recordService.js";
 import { createDashboardView } from "../ui/dashboardView.js";
 import { createConfirmModal, createWizardModal, getInitialWizardData, WIZARD_STEPS } from "../ui/modalView.js";
 import { bindChartTooltip } from "../ui/chart.js";
+import { formatDateInputValue } from "../utils/date.js";
 
 export function createDashboardController({ onLoggedOut }) {
   const state = {
@@ -261,9 +262,9 @@ export function createDashboardController({ onLoggedOut }) {
       state.filters.range = event.target.value;
 
       if (state.filters.range === "custom") {
-        const today = new Date().toISOString().slice(0, 10);
+        const today = formatDateInputValue();
         state.filters.customEnd = today;
-        state.filters.customStart = new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+        state.filters.customStart = formatDateInputValue(new Date(Date.now() - 6 * 24 * 60 * 60 * 1000));
       }
 
       render();

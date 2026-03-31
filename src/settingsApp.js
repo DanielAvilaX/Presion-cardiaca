@@ -1,5 +1,4 @@
-import { authRepository } from "./repositories/authRepository.js";
-import { profileRepository } from "./repositories/profileRepository.js";
+import { authService } from "./services/authService.js";
 import { recordRepository } from "./repositories/recordRepository.js";
 import { createSettingsController } from "./controllers/settingsController.js";
 
@@ -18,19 +17,19 @@ function renderError(msg) {
 
 (async () => {
   try {
-    const session = await authRepository.getSession();
+    const userData = await authService.loadCurrentUser();
 
-    if (!session?.user) {
+    if (!userData?.user) {
       window.location.href = "index.html";
       return;
     }
 
     const [profile, records] = await Promise.all([
-      profileRepository.getProfileByUserId(session.user.id),
-      recordRepository.getRecordsByUserId(session.user.id),
+      Promise.resolve(userData.profile),
+      recordRepository.getRecordsByUserId(userData.user.id),
     ]);
 
-    const controller = createSettingsController({ root, modalRoot });
+    const controller = createSettingsController({ root, modalRoot, currentUserId: userData.user.id });
     controller.render(profile, records);
 
     // Activar la pestana indicada en el URL (?tab=records, ?tab=password, ?tab=profile)

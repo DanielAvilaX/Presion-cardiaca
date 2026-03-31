@@ -8,7 +8,7 @@ import {
   renderDeleteModalHTML,
 } from "../ui/settingsView.js";
 
-export function createSettingsController({ root, modalRoot }) {
+export function createSettingsController({ root, modalRoot, currentUserId }) {
   // ── Utilidades ──────────────────────────────────────────────────────────────
 
   function showMessageBar(containerId, type, text) {
@@ -100,23 +100,22 @@ export function createSettingsController({ root, modalRoot }) {
         if (!rec) return;
 
         editingId = id;
-        const container = root.querySelector("#edit-form-container");
-        container.innerHTML = renderEditFormHTML(rec);
+        modalRoot.innerHTML = renderEditFormHTML(rec);
 
-        container.querySelector("#ef-cancel")?.addEventListener("click", () => {
-          container.innerHTML = "";
+        modalRoot.querySelector("#ef-cancel")?.addEventListener("click", () => {
+          modalRoot.innerHTML = "";
           editingId = null;
         });
 
-        container.querySelector("#ef-save")?.addEventListener("click", async () => {
+        modalRoot.querySelector("#ef-save")?.addEventListener("click", async () => {
           const payload = {
-            recordDate: container.querySelector("#ef-date").value,
-            recordTime: container.querySelector("#ef-time").value,
-            taSystolic: Number(container.querySelector("#ef-sys").value),
-            taDiastolic: Number(container.querySelector("#ef-dia").value),
-            heartRate: Number(container.querySelector("#ef-hr").value),
-            position: container.querySelector("#ef-pos").value,
-            observations: container.querySelector("#ef-obs").value,
+            recordDate: modalRoot.querySelector("#ef-date").value,
+            recordTime: modalRoot.querySelector("#ef-time").value,
+            taSystolic: Number(modalRoot.querySelector("#ef-sys").value),
+            taDiastolic: Number(modalRoot.querySelector("#ef-dia").value),
+            heartRate: Number(modalRoot.querySelector("#ef-hr").value),
+            position: modalRoot.querySelector("#ef-pos").value,
+            observations: modalRoot.querySelector("#ef-obs").value,
           };
 
           const { taSystolic: systolic, taDiastolic: diastolic, heartRate: hr } = payload;
@@ -139,7 +138,7 @@ export function createSettingsController({ root, modalRoot }) {
           }
 
           try {
-            await recordRepository.updateRecord(editingId, {
+            await recordRepository.updateRecord(editingId, currentUserId, {
               record_date: payload.recordDate,
               record_time: payload.recordTime,
               ta_systolic: systolic,
@@ -163,7 +162,7 @@ export function createSettingsController({ root, modalRoot }) {
               };
             }
 
-            container.innerHTML = "";
+            modalRoot.innerHTML = "";
             editingId = null;
             root.querySelector(".records-table-wrap").innerHTML = renderRecordsTableHTML(records);
             bindRecordEvents(records);
@@ -189,14 +188,13 @@ export function createSettingsController({ root, modalRoot }) {
 
         modalRoot.querySelector("#del-confirm")?.addEventListener("click", async () => {
           try {
-            await recordRepository.deleteRecord(id);
+            await recordRepository.deleteRecord(id, currentUserId);
             modalRoot.innerHTML = "";
 
             const idx = records.findIndex((r) => r.id === id);
             if (idx !== -1) records.splice(idx, 1);
 
             root.querySelector(".records-table-wrap").innerHTML = renderRecordsTableHTML(records);
-            root.querySelector("#edit-form-container").innerHTML = "";
             bindRecordEvents(records);
             showMessageBar("msg-records", "success", "Registro eliminado correctamente.");
           } catch (err) {

@@ -30,10 +30,10 @@ export const recordService = {
     });
   },
 
-  async updateRecord(recordId, payload) {
+  async updateRecord(recordId, userId, payload) {
     const validated = validateRecordPayload(payload);
 
-    await recordRepository.updateRecord(recordId, {
+    await recordRepository.updateRecord(recordId, userId, {
       record_date: payload.recordDate,
       record_time: payload.recordTime,
       ta_systolic: validated.systolic,
@@ -44,8 +44,8 @@ export const recordService = {
     });
   },
 
-  async deleteRecord(recordId) {
-    await recordRepository.deleteRecord(recordId);
+  async deleteRecord(recordId, userId) {
+    await recordRepository.deleteRecord(recordId, userId);
   },
 
   getStats(records, filters) {

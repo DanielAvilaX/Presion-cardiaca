@@ -3,17 +3,11 @@ import { profileRepository } from "../repositories/profileRepository.js";
 import { validateRegistration } from "../utils/validation.js";
 
 export const authService = {
-  async loadCurrentUser(existingSession = null) {
-    const session = existingSession ?? (await authRepository.getSession());
-
-    if (!session?.user) {
-      return null;
-    }
-
+  async ensureProfile(user) {
     let profile;
 
     try {
-      profile = await profileRepository.getProfileByUserId(session.user.id);
+      profile = await profileRepository.getProfileByUserId(user.id);
     } catch (error) {
       const shouldRecoverProfile =
         error.code === "PGRST116" || error.message?.toLowerCase().includes("0 rows");
@@ -22,20 +16,31 @@ export const authService = {
         throw error;
       }
 
-      const metadata = session.user.user_metadata ?? {};
+      const metadata = user.user_metadata ?? {};
 
-      // Si el perfil no existe pero la sesion sigue viva, se reconstruye desde los metadatos del usuario.
       await profileRepository.upsertProfile({
-        id: session.user.id,
+        id: user.id,
         first_name: metadata.first_name ?? "Usuario",
         last_name: metadata.last_name ?? "",
         age: Number(metadata.age ?? 1),
-        document_number: metadata.document_number ?? `pendiente-${session.user.id.slice(0, 8)}`,
-        email: metadata.email ?? session.user.email
+        document_number: metadata.document_number ?? `pendiente-${user.id.slice(0, 8)}`,
+        email: metadata.email ?? user.email
       });
 
-      profile = await profileRepository.getProfileByUserId(session.user.id);
+      profile = await profileRepository.getProfileByUserId(user.id);
     }
+
+    return profile;
+  },
+
+  async loadCurrentUser(existingSession = null) {
+    const session = existingSession ?? (await authRepository.getSession());
+
+    if (!session?.user) {
+      return null;
+    }
+
+    const profile = await this.ensureProfile(session.user);
 
     return {
       session,
@@ -56,7 +61,7 @@ export const authService = {
   async register(formData) {
     validateRegistration(formData);
 
-    return authRepository.signUp(
+    const result = await authRepository.signUp(
       {
         email: formData.email,
         password: formData.password
@@ -68,6 +73,12 @@ export const authService = {
         document: formData.document
       }
     );
+
+    if (result.session?.user) {
+      await this.ensureProfile(result.session.user);
+    }
+
+    return result;
   },
 
   async logout() {

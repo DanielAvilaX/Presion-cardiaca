@@ -1,5 +1,6 @@
 import { createChartMarkup } from "./chart.js";
 import { formatDisplayDate } from "../utils/date.js";
+import { escHtml } from "../utils/html.js";
 
 function createRows(records) {
   if (!records.length) {
@@ -18,10 +19,10 @@ function createRows(records) {
         <tr>
           <td>${formatDisplayDate(record.record_date)}</td>
           <td>${record.record_time.slice(0, 5)}</td>
-          <td>${record.taLabel}</td>
+          <td>${escHtml(record.taLabel)}</td>
           <td>${record.heart_rate}</td>
-          <td>${record.position}</td>
-          <td>${record.observations ?? "-"}</td>
+          <td>${escHtml(record.position)}</td>
+          <td>${record.observations ? escHtml(record.observations) : "-"}</td>
           <td>
             <a href="settings.html?tab=records" class="table-link">Editar / Eliminar</a>
           </td>
@@ -40,7 +41,7 @@ export function createDashboardView({ profile, records, stats, filters, chartVis
       <article class="panel dashboard-header">
         <div>
           <p class="eyebrow">Panel principal</p>
-          <h2>Hola, ${fullName || "usuario"}.</h2>
+          <h2>Hola, ${escHtml(fullName || "usuario")}.</h2>
           <p class="helper">Consulta tus registros, agrega nuevas mediciones y sigue la evolucion de tus datos.</p>
         </div>
         <div class="range-controls">
@@ -105,9 +106,9 @@ export function createDashboardView({ profile, records, stats, filters, chartVis
             <a href="settings.html" class="ghost-button" style="text-decoration:none; font-size:0.88rem;">Editar perfil</a>
           </div>
           <div class="confirm-list">
-            <div><strong>Documento</strong><span>${profile.document_number}</span></div>
+            <div><strong>Documento</strong><span>${escHtml(profile.document_number)}</span></div>
             <div><strong>Edad</strong><span>${profile.age}</span></div>
-            <div><strong>Correo</strong><span>${profile.email}</span></div>
+            <div><strong>Correo</strong><span>${escHtml(profile.email)}</span></div>
           </div>
         </article>
       </section>

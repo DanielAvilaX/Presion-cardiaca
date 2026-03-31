@@ -18,19 +18,21 @@ export const recordRepository = {
     if (error) throw error;
   },
 
-  async updateRecord(id, updates) {
+  async updateRecord(id, userId, updates) {
     const { error } = await supabase
       .from("pressure_records")
       .update(updates)
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", userId);
     if (error) throw error;
   },
 
-  async deleteRecord(id) {
+  async deleteRecord(id, userId) {
     const { error } = await supabase
       .from("pressure_records")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .eq("user_id", userId);
     if (error) throw error;
   }
 };

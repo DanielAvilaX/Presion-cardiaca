@@ -75,7 +75,6 @@ export function renderSettingsHTML(profile, records) {
           <div class="records-table-wrap" style="margin-top:16px;">
             ${renderRecordsTableHTML(records)}
           </div>
-          <div id="edit-form-container"></div>
         </article>
       </div>
     </div>
@@ -120,50 +119,53 @@ export function renderRecordsTableHTML(records) {
 
 export function renderEditFormHTML(rec) {
   return `
-    <div class="edit-record-form open" id="edit-form-${rec.id}">
-      <h4 style="margin:0;">Editando registro del ${formatDisplayDate(rec.record_date)}</h4>
-      <div class="inline-grid-2">
-        <div class="field">
-          <label for="ef-date">Fecha</label>
-          <input id="ef-date" type="date" value="${rec.record_date}" />
+    <div class="modal" id="edit-record-modal">
+      <article class="modal-card modal-card--wizard">
+        <h3 style="margin:0;">Editar registro</h3>
+        <p class="helper">Actualiza los datos del registro del ${formatDisplayDate(rec.record_date)}.</p>
+        <div class="inline-grid-2">
+          <div class="field">
+            <label for="ef-date">Fecha</label>
+            <input id="ef-date" type="date" value="${rec.record_date}" />
+          </div>
+          <div class="field">
+            <label for="ef-time">Hora</label>
+            <input id="ef-time" type="time" value="${rec.record_time.slice(0, 5)}" />
+          </div>
+        </div>
+        <div class="inline-grid-2">
+          <div class="field">
+            <label for="ef-sys">TA Sistolica (mmHg)</label>
+            <input id="ef-sys" type="number" min="1" max="200" value="${rec.ta_systolic}" />
+          </div>
+          <div class="field">
+            <label for="ef-dia">TA Diastolica (mmHg)</label>
+            <input id="ef-dia" type="number" min="1" max="120" value="${rec.ta_diastolic}" />
+          </div>
+        </div>
+        <div class="inline-grid-2">
+          <div class="field">
+            <label for="ef-hr">Frecuencia Cardiaca (lpm)</label>
+            <input id="ef-hr" type="number" min="1" max="120" value="${rec.heart_rate}" />
+          </div>
+          <div class="field">
+            <label for="ef-pos">Posicion</label>
+            <select id="ef-pos">
+              <option ${rec.position === "Sentado" ? "selected" : ""}>Sentado</option>
+              <option ${rec.position === "Acostado" ? "selected" : ""}>Acostado</option>
+              <option ${rec.position === "De pie" ? "selected" : ""}>De pie</option>
+            </select>
+          </div>
         </div>
         <div class="field">
-          <label for="ef-time">Hora</label>
-          <input id="ef-time" type="time" value="${rec.record_time.slice(0, 5)}" />
+          <label for="ef-obs">Observaciones</label>
+          <textarea id="ef-obs" placeholder="Opcional">${escHtml(rec.observations ?? "")}</textarea>
         </div>
-      </div>
-      <div class="inline-grid-2">
-        <div class="field">
-          <label for="ef-sys">TA Sistolica (mmHg)</label>
-          <input id="ef-sys" type="number" min="1" max="200" value="${rec.ta_systolic}" />
+        <div class="form-actions">
+          <button id="ef-cancel" class="ghost-button" type="button">Cancelar</button>
+          <button id="ef-save" class="button" type="button">Guardar cambios</button>
         </div>
-        <div class="field">
-          <label for="ef-dia">TA Diastolica (mmHg)</label>
-          <input id="ef-dia" type="number" min="1" max="120" value="${rec.ta_diastolic}" />
-        </div>
-      </div>
-      <div class="inline-grid-2">
-        <div class="field">
-          <label for="ef-hr">Frecuencia Cardiaca (lpm)</label>
-          <input id="ef-hr" type="number" min="1" max="120" value="${rec.heart_rate}" />
-        </div>
-        <div class="field">
-          <label for="ef-pos">Posicion</label>
-          <select id="ef-pos">
-            <option ${rec.position === "Sentado" ? "selected" : ""}>Sentado</option>
-            <option ${rec.position === "Acostado" ? "selected" : ""}>Acostado</option>
-            <option ${rec.position === "De pie" ? "selected" : ""}>De pie</option>
-          </select>
-        </div>
-      </div>
-      <div class="field">
-        <label for="ef-obs">Observaciones</label>
-        <textarea id="ef-obs" placeholder="Opcional">${rec.observations ?? ""}</textarea>
-      </div>
-      <div class="form-actions">
-        <button id="ef-cancel" class="ghost-button" type="button">Cancelar</button>
-        <button id="ef-save" class="button" type="button">Guardar cambios</button>
-      </div>
+      </article>
     </div>
   `;
 }
