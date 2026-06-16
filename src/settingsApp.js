@@ -1,6 +1,9 @@
 import { authService } from "./services/authService.js";
 import { recordRepository } from "./repositories/recordRepository.js";
 import { createSettingsController } from "./controllers/settingsController.js";
+import { initTopbar } from "./ui/topbar.js";
+
+initTopbar();
 
 const root = document.querySelector("#settings-app");
 const modalRoot = document.querySelector("#modal-root");

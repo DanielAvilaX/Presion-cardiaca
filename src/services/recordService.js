@@ -1,5 +1,6 @@
 import { recordRepository } from "../repositories/recordRepository.js";
-import { createDateFromRecord, getRangeStart } from "../utils/date.js";
+import { getRangeStart } from "../utils/date.js";
+import { computeStats } from "../utils/stats.js";
 import { validateRecordPayload } from "../utils/validation.js";
 
 function mapRecordForView(record) {
@@ -49,33 +50,17 @@ export const recordService = {
   },
 
   getStats(records, filters) {
-    const startDate = getRangeStart(filters.range, filters.customStart);
-    const endDate =
+    const start = getRangeStart(filters.range, filters.customStart);
+    const end =
       filters.range === "custom" && filters.customEnd
         ? new Date(`${filters.customEnd}T23:59:59`)
         : new Date();
 
+    // Ventana anterior de igual longitud para calcular la tendencia.
+    const windowMs = Math.max(end - start, 0);
+    const prevStart = new Date(start.getTime() - windowMs);
+
     // Las estadisticas se recalculan en memoria para evitar una consulta nueva por cada filtro.
-    const filtered = records.filter((record) => {
-      const recordDate = createDateFromRecord(record);
-      return recordDate >= startDate && recordDate <= endDate;
-    });
-
-    const totals = filtered.reduce(
-      (accumulator, record) => {
-        accumulator.systolic += record.ta_systolic;
-        accumulator.diastolic += record.ta_diastolic;
-        accumulator.heartRate += record.heart_rate;
-        return accumulator;
-      },
-      { systolic: 0, diastolic: 0, heartRate: 0 }
-    );
-
-    return {
-      filtered,
-      averageSystolic: filtered.length ? Math.round(totals.systolic / filtered.length) : 0,
-      averageDiastolic: filtered.length ? Math.round(totals.diastolic / filtered.length) : 0,
-      averageHeartRate: filtered.length ? Math.round(totals.heartRate / filtered.length) : 0
-    };
+    return computeStats(records, { start, end, prevStart });
   }
 };

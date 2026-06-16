@@ -1,6 +1,9 @@
 import { authRepository } from "./repositories/authRepository.js";
 import { recordRepository } from "./repositories/recordRepository.js";
 import { createChartController } from "./controllers/chartController.js";
+import { initTopbar } from "./ui/topbar.js";
+
+initTopbar();
 
 const root = document.querySelector("#chart-root");
 const rangeSelect = document.querySelector("#range-select-full");

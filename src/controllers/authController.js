@@ -1,10 +1,50 @@
 import { authService } from "../services/authService.js";
 import { createAuthView } from "../ui/authView.js";
+import { bindPasswordToggles } from "../ui/dom.js";
 
 export function createAuthController({ onLoggedIn }) {
   function setMessage(element, message, type) {
     element.textContent = message;
     element.className = `message ${type}`;
+  }
+
+  function setHint(root, id, message, status) {
+    const hint = root.querySelector(`#${id}-hint`);
+    const field = root.querySelector(`#${id}`)?.closest(".field");
+    if (!hint) return;
+    hint.textContent = message;
+    hint.className = `field-hint ${status}`;
+    if (field) field.classList.toggle("has-error", status === "error");
+  }
+
+  function bindLiveValidation(root) {
+    const email = root.querySelector("#register-email");
+    const confirmEmail = root.querySelector("#register-confirm-email");
+    const password = root.querySelector("#register-password");
+    const confirmPassword = root.querySelector("#register-confirm-password");
+
+    const checkEmails = () => {
+      if (!confirmEmail.value) return setHint(root, "register-confirm-email", "", "");
+      if (email.value === confirmEmail.value) setHint(root, "register-confirm-email", "Los correos coinciden.", "ok");
+      else setHint(root, "register-confirm-email", "Los correos no coinciden.", "error");
+    };
+
+    const checkPassword = () => {
+      if (!password.value) return setHint(root, "register-password", "", "");
+      if (password.value.length < 6) setHint(root, "register-password", "Minimo 6 caracteres.", "error");
+      else setHint(root, "register-password", "Longitud valida.", "ok");
+    };
+
+    const checkConfirmPassword = () => {
+      if (!confirmPassword.value) return setHint(root, "register-confirm-password", "", "");
+      if (password.value === confirmPassword.value) setHint(root, "register-confirm-password", "Las contrasenas coinciden.", "ok");
+      else setHint(root, "register-confirm-password", "Las contrasenas no coinciden.", "error");
+    };
+
+    email?.addEventListener("input", checkEmails);
+    confirmEmail?.addEventListener("input", checkEmails);
+    password?.addEventListener("input", () => { checkPassword(); checkConfirmPassword(); });
+    confirmPassword?.addEventListener("input", checkConfirmPassword);
   }
 
   function bindTabs(root) {
@@ -84,6 +124,8 @@ export function createAuthController({ onLoggedIn }) {
       bindTabs(root);
       bindLogin(root);
       bindRegister(root);
+      bindPasswordToggles(root);
+      bindLiveValidation(root);
     }
   };
 }

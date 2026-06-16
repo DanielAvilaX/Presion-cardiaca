@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(node --test)",
+      "Bash(git --no-pager diff --stat HEAD)",
+      "Bash(git --no-pager diff --stat HEAD~1 HEAD -- src/)",
+      "Bash(git --no-pager diff HEAD -- src/ui/dashboardView.js src/controllers/dashboardController.js src/ui/chart.js src/ui/modalView.js)",
+      "Bash(git --no-pager diff --stat HEAD -- src/)",
+      "Bash(git --no-pager diff HEAD -- src/ui/dom.js src/ui/authView.js)",
+      "Bash(node --test test/)"
+    ]
+  }
+}

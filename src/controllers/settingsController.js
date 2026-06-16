@@ -7,6 +7,7 @@ import {
   renderEditFormHTML,
   renderDeleteModalHTML,
 } from "../ui/settingsView.js";
+import { bindPasswordToggles } from "../ui/dom.js";
 
 export function createSettingsController({ root, modalRoot, currentUserId }) {
   // ── Utilidades ──────────────────────────────────────────────────────────────
@@ -102,6 +103,14 @@ export function createSettingsController({ root, modalRoot, currentUserId }) {
         editingId = id;
         modalRoot.innerHTML = renderEditFormHTML(rec);
 
+        const editModal = modalRoot.querySelector("#edit-record-modal");
+        editModal?.addEventListener("mousedown", (e) => {
+          if (e.target === editModal) {
+            modalRoot.innerHTML = "";
+            editingId = null;
+          }
+        });
+
         modalRoot.querySelector("#ef-cancel")?.addEventListener("click", () => {
           modalRoot.innerHTML = "";
           editingId = null;
@@ -182,6 +191,11 @@ export function createSettingsController({ root, modalRoot, currentUserId }) {
 
         modalRoot.innerHTML = renderDeleteModalHTML(rec);
 
+        const delOverlay = modalRoot.querySelector(".confirm-delete-overlay");
+        delOverlay?.addEventListener("mousedown", (e) => {
+          if (e.target === delOverlay) modalRoot.innerHTML = "";
+        });
+
         modalRoot.querySelector("#del-cancel")?.addEventListener("click", () => {
           modalRoot.innerHTML = "";
         });
@@ -215,6 +229,7 @@ export function createSettingsController({ root, modalRoot, currentUserId }) {
       bindProfileEvents(profile);
       bindPasswordEvents();
       bindRecordEvents(records);
+      bindPasswordToggles(root);
     },
   };
 }

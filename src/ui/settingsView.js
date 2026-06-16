@@ -1,5 +1,8 @@
 import { formatDisplayDate } from "../utils/date.js";
 import { escHtml } from "../utils/html.js";
+import { classifyRecord } from "../utils/bpClassification.js";
+import { bpBadge } from "./components.js";
+import { icon } from "./icons.js";
 
 export function renderSettingsHTML(profile, records) {
   return `
@@ -51,13 +54,19 @@ export function renderSettingsHTML(profile, records) {
           <p class="helper">La nueva contrasena debe tener al menos 6 caracteres.</p>
           <div id="msg-password" class="message-bar"></div>
           <div class="form-grid" style="margin-top:16px;">
-            <div class="field">
+            <div class="field field-password">
               <label for="p-newPass">Nueva contrasena</label>
-              <input id="p-newPass" type="password" placeholder="••••••••" />
+              <input id="p-newPass" type="password" placeholder="••••••••" autocomplete="new-password" />
+              <button type="button" class="password-toggle" data-toggle-password="p-newPass" aria-label="Mostrar contrasena">
+                ${icon("eye", { size: 18 })}
+              </button>
             </div>
-            <div class="field">
+            <div class="field field-password">
               <label for="p-confirmPass">Confirmar contrasena</label>
-              <input id="p-confirmPass" type="password" placeholder="••••••••" />
+              <input id="p-confirmPass" type="password" placeholder="••••••••" autocomplete="new-password" />
+              <button type="button" class="password-toggle" data-toggle-password="p-confirmPass" aria-label="Mostrar contrasena">
+                ${icon("eye", { size: 18 })}
+              </button>
             </div>
           </div>
           <div class="form-actions">
@@ -72,7 +81,7 @@ export function renderSettingsHTML(profile, records) {
           <h3>Mis registros</h3>
           <p class="helper">Edita o elimina cualquier registro existente.</p>
           <div id="msg-records" class="message-bar"></div>
-          <div class="records-table-wrap" style="margin-top:16px;">
+          <div class="records-table-wrap table-as-cards" style="margin-top:16px;">
             ${renderRecordsTableHTML(records)}
           </div>
         </article>
@@ -87,29 +96,31 @@ export function renderRecordsTableHTML(records) {
   }
 
   const rows = records
-    .map(
-      (rec) => `
+    .map((rec) => {
+      const category = classifyRecord(rec);
+      return `
       <tr>
-        <td>${formatDisplayDate(rec.record_date)}</td>
-        <td>${rec.record_time.slice(0, 5)}</td>
-        <td>${rec.ta_systolic}/${rec.ta_diastolic}</td>
-        <td>${rec.heart_rate}</td>
-        <td>${escHtml(rec.position)}</td>
-        <td>${rec.observations ? escHtml(rec.observations) : "-"}</td>
-        <td style="white-space:nowrap;">
+        <td data-label="Fecha">${formatDisplayDate(rec.record_date)}</td>
+        <td data-label="Hora">${rec.record_time.slice(0, 5)}</td>
+        <td data-label="TA">${rec.ta_systolic}/${rec.ta_diastolic}</td>
+        <td data-label="Categoria">${bpBadge(category, { compact: true })}</td>
+        <td data-label="FC">${rec.heart_rate}</td>
+        <td data-label="Posicion">${escHtml(rec.position)}</td>
+        <td data-label="Observaciones">${rec.observations ? escHtml(rec.observations) : "-"}</td>
+        <td data-label="Acciones" style="white-space:nowrap;">
           <button class="ghost-button btn-edit-rec" data-id="${rec.id}" style="padding:8px 14px; font-size:0.85rem;" type="button">Editar</button>
           <button class="danger-button btn-del-rec" data-id="${rec.id}" style="padding:8px 14px; font-size:0.85rem;" type="button">Eliminar</button>
         </td>
       </tr>
-    `
-    )
+    `;
+    })
     .join("");
 
   return `
     <table>
       <thead>
         <tr>
-          <th>Fecha</th><th>Hora</th><th>TA</th><th>FC</th><th>Posicion</th><th>Observaciones</th><th>Acciones</th>
+          <th>Fecha</th><th>Hora</th><th>TA</th><th>Categoria</th><th>FC</th><th>Posicion</th><th>Observaciones</th><th>Acciones</th>
         </tr>
       </thead>
       <tbody>${rows}</tbody>

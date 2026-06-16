@@ -21,30 +21,30 @@ export function createAuthView() {
         <section data-auth-panel="login">
           <h2>Bienvenido</h2>
           <p class="helper">Usa tu correo y contrasena para entrar al panel principal.</p>
-          <form id="login-form" class="form-grid">
+          <form id="login-form" class="form-grid" novalidate>
             ${createField({ id: "login-email", label: "Correo", type: "email", placeholder: "correo@ejemplo.com" })}
             ${createField({ id: "login-password", label: "Contrasena", type: "password", placeholder: "******" })}
-            <button class="button" type="submit">Entrar</button>
-            <p id="login-message" class="message"></p>
+            <button class="button button-icon" type="submit">Entrar</button>
+            <p id="login-message" class="message" role="status" aria-live="polite"></p>
           </form>
         </section>
 
         <section data-auth-panel="register" class="hidden">
           <h2>Crea tu cuenta</h2>
           <p class="helper">Completa tus datos para activar el seguimiento personal.</p>
-          <form id="register-form" class="form-grid columns-2">
+          <form id="register-form" class="form-grid columns-2" novalidate>
             ${createField({ id: "register-first-name", label: "Nombre", placeholder: "Ana" })}
             ${createField({ id: "register-last-name", label: "Apellido", placeholder: "Perez" })}
             ${createField({ id: "register-age", label: "Edad", type: "number", min: "1", placeholder: "30" })}
             ${createField({ id: "register-document", label: "Documento", placeholder: "123456789" })}
-            ${createField({ id: "register-email", label: "Correo", type: "email", placeholder: "correo@ejemplo.com" })}
-            ${createField({ id: "register-confirm-email", label: "Confirmacion de correo", type: "email", placeholder: "correo@ejemplo.com" })}
-            ${createField({ id: "register-password", label: "Contrasena", type: "password", placeholder: "******" })}
-            ${createField({ id: "register-confirm-password", label: "Confirmacion de contrasena", type: "password", placeholder: "******" })}
+            ${createField({ id: "register-email", label: "Correo", type: "email", placeholder: "correo@ejemplo.com", hint: true })}
+            ${createField({ id: "register-confirm-email", label: "Confirmacion de correo", type: "email", placeholder: "correo@ejemplo.com", hint: true })}
+            ${createField({ id: "register-password", label: "Contrasena", type: "password", placeholder: "******", hint: true, autocomplete: "new-password" })}
+            ${createField({ id: "register-confirm-password", label: "Confirmacion de contrasena", type: "password", placeholder: "******", hint: true, autocomplete: "new-password" })}
             <div class="field" style="grid-column: 1 / -1;">
-              <button class="button" type="submit">Crear cuenta</button>
+              <button class="button button-icon" type="submit">Crear cuenta</button>
             </div>
-            <p id="register-message" class="message" style="grid-column: 1 / -1;"></p>
+            <p id="register-message" class="message" style="grid-column: 1 / -1;" role="status" aria-live="polite"></p>
           </form>
         </section>
       </article>

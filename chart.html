@@ -3,25 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#ab3b30" />
     <title>Grafica de evolucion | Tension</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("tension-theme");
+          if (t !== "light" && t !== "dark") {
+            t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
+    </script>
     <link rel="stylesheet" href="./styles/main.css" />
     <link rel="stylesheet" href="./styles/chart.css" />
   </head>
   <body>
     <div class="app-shell chart-full-page">
+      <div class="topbar">
+        <a class="brand" href="index.html">
+          <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Tension
+        </a>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Cambiar tema"></button>
+      </div>
+
       <div class="chart-full-header">
         <div>
           <p class="eyebrow">Evolucion</p>
           <h2 style="margin:0;">Grafica de tension arterial y FC</h2>
         </div>
         <div class="chart-range-bar">
-          <select id="range-select-full">
+          <select id="range-select-full" aria-label="Rango de tiempo">
             <option value="7">Ultimos 7 dias</option>
             <option value="15">Ultimos 15 dias</option>
             <option value="30">Ultimo mes</option>

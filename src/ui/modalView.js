@@ -1,5 +1,8 @@
 import { createField, createSelectField } from "./dom.js";
 import { getCurrentTime, getTodayDate } from "../utils/date.js";
+import { classifyBP } from "../utils/bpClassification.js";
+import { bpBadge } from "./components.js";
+import { icon } from "./icons.js";
 
 const steps = [
   { key: "recordDate", title: "Fecha", description: "Confirma la fecha del registro.", type: "date" },
@@ -26,7 +29,11 @@ export function getInitialWizardData() {
   };
 }
 
-function createNumberField(step, value) {
+function createNumberField(step, value, wizardData) {
+  // En el paso de diastolica ya tenemos sistolica: mostramos la categoria en vivo.
+  const showHint = step.key === "taDiastolic";
+  const hint = showHint ? clinicalHintMarkup(wizardData.taSystolic, value) : "";
+
   return `
     <div class="number-input-wrap">
       <input
@@ -41,8 +48,17 @@ function createNumberField(step, value) {
         autocomplete="off"
       />
       <span class="number-unit">${step.unit}</span>
+      ${showHint ? `<div class="clinical-hint" id="clinical-hint">${hint}</div>` : ""}
     </div>
   `;
+}
+
+export function clinicalHintMarkup(systolic, diastolic) {
+  const sys = Number(systolic);
+  const dia = Number(diastolic);
+  if (!Number.isFinite(sys) || !sys || !Number.isFinite(dia) || !dia) return "";
+  const category = classifyBP(sys, dia);
+  return `${bpBadge(category)}`;
 }
 
 function createObservationsField(wizardData) {
@@ -76,7 +92,7 @@ function createObservationsField(wizardData) {
 
 function createStepContent(step, wizardData) {
   if (step.type === "number") {
-    return createNumberField(step, wizardData[step.key]);
+    return createNumberField(step, wizardData[step.key], wizardData);
   }
 
   if (step.type === "observations") {
@@ -120,11 +136,13 @@ export function createWizardModal({ currentStep, wizardData, loading = false, er
             <div class="wizard-progress-bar" style="width: ${progressWidth}%"></div>
           </div>
         </div>
-        <h2 class="wizard-title">${step.title}</h2>
-        <p class="helper wizard-description">${step.description}</p>
-        <div class="wizard-field-wrap${step.type === "number" ? " wizard-field-wrap--number" : ""}">
-          ${createStepContent(step, wizardData)}
-          ${errorMessage ? `<p class="message error" style="margin-top:12px;">${errorMessage}</p>` : ""}
+        <div class="wizard-step" data-step="${currentStep}">
+          <h2 class="wizard-title">${step.title}</h2>
+          <p class="helper wizard-description">${step.description}</p>
+          <div class="wizard-field-wrap${step.type === "number" ? " wizard-field-wrap--number" : ""}">
+            ${createStepContent(step, wizardData)}
+            ${errorMessage ? `<p class="message error" style="margin-top:12px;">${errorMessage}</p>` : ""}
+          </div>
         </div>
         <div class="wizard-actions">
           <button id="close-wizard" class="ghost-button" type="button">Cancelar</button>
@@ -141,12 +159,18 @@ export function createWizardModal({ currentStep, wizardData, loading = false, er
 }
 
 export function createConfirmModal({ wizardData, loading = false, errorMessage = "" }) {
+  const category = classifyBP(wizardData.taSystolic, wizardData.taDiastolic);
+
   return `
     <div class="modal" id="confirm-modal">
       <article class="modal-card modal-card--wizard">
         <span class="step-pill">Confirmacion final</span>
         <h2 class="wizard-title">Verifica los datos</h2>
         <p class="helper">Si todo esta bien, presiona subir datos para guardarlos.</p>
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:14px;">
+          ${bpBadge(category)}
+          <span class="helper" style="font-size:0.88rem;">${category.advice}</span>
+        </div>
         <div class="confirm-list">
           <div><strong>Fecha</strong><span>${wizardData.recordDate}</span></div>
           <div><strong>Hora</strong><span>${wizardData.recordTime}</span></div>
@@ -162,6 +186,20 @@ export function createConfirmModal({ wizardData, loading = false, errorMessage =
           <button id="confirm-submit" class="button" type="button" ${loading ? "disabled" : ""}>
             ${loading ? "Guardando..." : "Subir datos"}
           </button>
+        </div>
+      </article>
+    </div>
+  `;
+}
+
+export function createSuccessModal() {
+  return `
+    <div class="modal" id="success-modal">
+      <article class="modal-card modal-card--wizard">
+        <div class="save-success">
+          <span class="success-check">${icon("check", { size: 44, strokeWidth: 3 })}</span>
+          <h2 class="wizard-title" style="margin:0;">Registro guardado</h2>
+          <p class="helper">Tu medicion se agrego correctamente.</p>
         </div>
       </article>
     </div>

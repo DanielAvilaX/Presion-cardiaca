@@ -3,33 +3,57 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Registra y visualiza tu tension arterial y frecuencia cardiaca con estadisticas y clasificacion clinica." />
+    <meta name="theme-color" content="#ab3b30" />
     <title>Tension | Registro de tension cardiaca</title>
+    <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
+    <script>
+      (function () {
+        try {
+          var t = localStorage.getItem("tension-theme");
+          if (t !== "light" && t !== "dark") {
+            t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+          }
+          document.documentElement.setAttribute("data-theme", t);
+        } catch (e) {}
+      })();
+    </script>
     <link rel="stylesheet" href="./styles/main.css" />
   </head>
   <body>
     <div class="app-shell">
+      <div class="topbar">
+        <a class="brand" href="index.html">
+          <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          Tension
+        </a>
+        <button class="icon-button" id="theme-toggle" type="button" aria-label="Cambiar tema"></button>
+      </div>
+
       <header class="hero">
         <div>
           <p class="eyebrow">Monitoreo personal</p>
           <h1>Tension cardiaca con seguimiento diario y estadisticas utiles.</h1>
           <p class="hero-copy">
-            Aplicacion web modular con autenticacion, registros clinicos y visualizacion
-            historica conectada a Supabase.
+            Registra, clasifica y visualiza la evolucion de tu tension arterial y frecuencia
+            cardiaca con clasificacion clinica automatica.
           </p>
         </div>
       </header>
 
       <main id="app"></main>
+
+      <footer class="app-footer">Tension · Monitoreo personal de salud cardiovascular</footer>
     </div>
 
     <div id="modal-root"></div>
 
     <script type="module" src="./src/app.js"></script>
   </body>
-  </html>
+</html>

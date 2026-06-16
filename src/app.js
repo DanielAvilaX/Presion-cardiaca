@@ -1,6 +1,9 @@
 import { authService } from "./services/authService.js";
 import { createAuthController } from "./controllers/authController.js";
 import { createDashboardController } from "./controllers/dashboardController.js";
+import { initTopbar } from "./ui/topbar.js";
+
+initTopbar();
 
 const appRoot = document.querySelector("#app");
 const modalRoot = document.querySelector("#modal-root");
