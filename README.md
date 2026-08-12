@@ -24,14 +24,26 @@ sin depender de una app de escritorio o una libreta física.
 JavaScript (módulos ES nativos, sin framework ni bundler) + Supabase
 (autenticación y base de datos con Row Level Security) + Vercel.
 
-La aplicación está organizada en capas simples:
+## Estructura del proyecto
 
-- `config/` — cliente de Supabase.
-- `repositories/` — acceso a datos.
-- `services/` — reglas de negocio y validaciones (probadas con unit tests).
-- `controllers/` — flujo y eventos de la interfaz.
-- `ui/` — vistas y componentes.
-- `utils/` — helpers puros y reutilizables.
+```text
+.
+├── index.html              # Panel principal
+├── chart.html               # Gráfica de evolución ampliada
+├── settings.html             # Configuración (perfil, contraseña, registros)
+├── sql/schema.sql           # Esquema, trigger y políticas RLS de Supabase
+├── styles/                  # main.css, chart.css, settings.css
+├── test/                    # Unit tests (node:test)
+├── api/config.js            # Función serverless: sirve la config de Supabase
+└── src/
+    ├── app.js, chartApp.js, settingsApp.js   # Puntos de entrada
+    ├── config/              # Cliente de Supabase
+    ├── repositories/        # Acceso a datos
+    ├── services/            # Reglas de negocio y validaciones
+    ├── controllers/         # Flujo y eventos de la interfaz
+    ├── ui/                  # Vistas y componentes
+    └── utils/               # Helpers puros y reutilizables
+```
 
 ## Credenciales y variables de entorno
 
