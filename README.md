@@ -2,20 +2,6 @@
 
 Aplicacion web estatica para registrar y visualizar tension arterial y frecuencia cardiaca por usuario, con clasificacion clinica automatica, autenticacion en Supabase y despliegue pensado para Vercel.
 
-## Credenciales de Supabase
-
-Puedes reutilizar las credenciales publicas que ya tienes.
-
-- `Project URL`: se usa para conectar con tu proyecto.
-- `Publishable Key` o `Anon Public Key`: ambas son seguras para frontend. Aqui se usa la `Publishable Key`.
-
-Credenciales configuradas actualmente:
-
-- `Project URL`: `https://gkwlwjjvoaohytgomwje.supabase.co`
-- `Publishable Key`: `sb_publishable_dMcKGAoZd48Gs2gd_gIcrA_VhUVgnoo`
-
-No uses `service_role` en el navegador. Solo genera nuevas credenciales si quieres rotarlas o separar ambientes.
-
 ## Estructura del proyecto
 
 ```text
