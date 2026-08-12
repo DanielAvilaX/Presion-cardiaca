@@ -68,24 +68,3 @@ npx serve .
 # o
 python -m http.server 3000
 ```
-
-## Como desplegar en Vercel
-
-1. Sube el proyecto a GitHub.
-2. Importa el repositorio en Vercel.
-3. Configura un proyecto estatico.
-4. No necesitas build command.
-
-## SQL para Supabase
-
-Ejecuta el contenido de [sql/schema.sql](sql/schema.sql) en el SQL Editor de Supabase.
-
-El script incluye un trigger que crea automaticamente el perfil en `user_profiles`
-cuando un usuario se registra en `auth.users`, asi que el alta funciona incluso si
-tienes confirmacion de correo activa en Supabase.
-
-## Configuracion importante en Supabase
-
-1. Ejecuta `sql/schema.sql`.
-2. Activa `Email` en `Authentication > Providers`.
-3. Revisa [src/config/env.js](src/config/env.js) si deseas cambiar credenciales.
