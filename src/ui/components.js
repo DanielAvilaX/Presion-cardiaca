@@ -85,6 +85,14 @@ export function statTile({ label, value, unit, trend, series, color, dashed = fa
 /**
  * Medidor semicircular que situa una lectura dentro de las cinco categorias.
  * Da una lectura "de un vistazo" antes de leer el numero.
+ *
+ * Es una pista gris de fondo (fija, siempre igual) más un arco de color que
+ * crece desde la izquierda a medida que empeora la categoria. Antes cada
+ * categoria era un tramo propio con gap, y para "Normal" (la primera) eso
+ * dejaba un tramo verde diminuto junto a un arco gris que ocupaba 4/5 del
+ * medidor: a simple vista el gris parecia "la barra" y el verde un resto.
+ * Con un unico trazo continuo detras y el color siempre encima, el color es
+ * inequivocamente lo que "crece" y el gris es solo la pista.
  */
 export function categoryGauge(category, { size = 132 } = {}) {
   const stroke = 10;
@@ -98,9 +106,7 @@ export function categoryGauge(category, { size = 132 } = {}) {
 
   const total = BP_CATEGORIES.length;
   const activeIndex = BP_CATEGORIES.findIndex((item) => item.key === category.key);
-
   const spanDeg = 180 / total;
-  const gapDeg = 5;
 
   // θ = 180° es el extremo izquierdo, 90° el punto más alto, 0° el extremo
   // derecho: recorrer de 180° a 0° traza el semicírculo superior.
@@ -112,28 +118,20 @@ export function categoryGauge(category, { size = 132 } = {}) {
   const arcPath = (startDeg, endDeg) => {
     const [x1, y1] = pointAt(startDeg);
     const [x2, y2] = pointAt(endDeg);
-    // sweep-flag 1: cada tramo avanza en sentido horario (izquierda -> arriba -> derecha).
-    return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius.toFixed(2)} ${radius.toFixed(2)} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+    const largeArc = startDeg - endDeg > 180 ? 1 : 0;
+    // sweep-flag 1: avanza en sentido horario (izquierda -> arriba -> derecha).
+    return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius.toFixed(2)} ${radius.toFixed(2)} 0 ${largeArc} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
   };
 
-  const segments = BP_CATEGORIES.map((item, position) => {
-    const startDeg = 180 - position * spanDeg + gapDeg / 2;
-    const endDeg = 180 - (position + 1) * spanDeg - gapDeg / 2;
-    const active = position === activeIndex;
-
-    return `<path
-      d="${arcPath(startDeg, endDeg)}"
-      fill="none"
-      style="stroke:${active ? item.color : "var(--surface-3)"};"
-      stroke-width="${active ? stroke + 3 : stroke}"
-      stroke-linecap="round"
-    />`;
-  }).join("");
+  // El relleno llega hasta el final del tramo de la categoria actual: crece
+  // hacia la derecha cuanto peor es la lectura (Crisis llena el medidor entero).
+  const fillEndDeg = 180 - (activeIndex + 1) * spanDeg;
 
   return `
     <svg class="gauge" width="${size}" height="${height}" viewBox="0 0 ${size} ${height}" role="img"
          aria-label="Categoría clínica: ${escHtml(category.label)}">
-      ${segments}
+      <path d="${arcPath(180, 0)}" fill="none" style="stroke:var(--surface-3);" stroke-width="${stroke}" stroke-linecap="round" />
+      <path d="${arcPath(180, fillEndDeg)}" fill="none" style="stroke:${category.color};" stroke-width="${stroke + 3}" stroke-linecap="round" />
       <text x="${cx}" y="${cy - radius * 0.32}" text-anchor="middle" style="fill:${category.color};"
             font-size="13" font-weight="700" font-family="inherit">${escHtml(category.label)}</text>
     </svg>

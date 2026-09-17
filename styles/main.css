@@ -1662,6 +1662,18 @@ select:focus {
   animation: pop 0.34s var(--ease);
 }
 
+/* El círculo aparece con "pop"; el check se dibuja después, con un retraso,
+   para que se sienta como una confirmación en dos tiempos y no como un
+   ícono estático que simplemente aparece ya formado. */
+.success-check .icon {
+  animation: check-draw 0.4s var(--ease) 0.2s both;
+}
+
+@keyframes check-draw {
+  from { transform: scale(0.4); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
 /* ── Configuración ────────────────────────────────────────────────────────── */
 
 .settings-tabs {
@@ -1817,19 +1829,19 @@ select:focus {
   .form-actions .ghost-button,
   .form-actions .danger-button { width: 100%; }
 
+  /* Modal centrado también en móvil (no una hoja inferior): con un solo
+     campo por paso, una hoja anclada abajo dejaba la mitad de la pantalla
+     vacía y la tarjeta quedaba a ras del borde inferior, como cortada. Un
+     modal completo y centrado, con margen alrededor, se ve como se espera
+     y además recentra solo cuando el teclado reduce --app-vh. */
   .modal {
-    padding: 0;
-    place-items: end stretch;
+    padding: 14px;
   }
 
-  /* Hoja inferior: patrón nativo en móvil */
   .modal-card {
     width: 100%;
-    max-height: min(94dvh, calc(var(--app-vh, 100dvh) - 12px));
-    border-radius: var(--r-xl) var(--r-xl) 0 0;
-    border-bottom: none;
-    padding: 20px 18px calc(20px + env(safe-area-inset-bottom));
-    animation: sheet-up 0.26s var(--ease);
+    max-height: min(90dvh, calc(var(--app-vh, 100dvh) - 28px));
+    padding: 22px 18px calc(22px + env(safe-area-inset-bottom));
   }
 
   .wizard-title { font-size: 1.5rem; }
@@ -1913,11 +1925,6 @@ select:focus {
 @media (max-width: 380px) {
   .latest-value { font-size: 2.5rem; }
   .tab-item { font-size: 0.63rem; }
-}
-
-@keyframes sheet-up {
-  from { transform: translateY(14px); opacity: 0.6; }
-  to { transform: translateY(0); opacity: 1; }
 }
 
 /* ── Preferencias del sistema ─────────────────────────────────────────────── */
