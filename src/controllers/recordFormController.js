@@ -156,6 +156,12 @@ export function createRecordFormController({ modalRoot, getUserId, onSaved }) {
         if (["e", "E", "+", "-", ".", ","].includes(event.key)) event.preventDefault();
       });
 
+      // El teclado numérico tarda un poco en desplegarse: un pequeño margen
+      // antes de centrar el campo evita que quede tapado durante la animación.
+      numberInput.addEventListener("focus", () => {
+        setTimeout(() => numberInput.scrollIntoView({ block: "center", behavior: "smooth" }), 300);
+      });
+
       numberInput.addEventListener("input", (event) => {
         const digits = event.target.value.replace(/\D/g, "").slice(0, 3);
         event.target.value = digits;

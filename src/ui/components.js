@@ -86,38 +86,55 @@ export function statTile({ label, value, unit, trend, series, color, dashed = fa
  * Medidor semicircular que situa una lectura dentro de las cinco categorias.
  * Da una lectura "de un vistazo" antes de leer el numero.
  */
-export function categoryGauge(category, { size = 116 } = {}) {
-  const stroke = 9;
+export function categoryGauge(category, { size = 132 } = {}) {
+  const stroke = 10;
   const radius = (size - stroke) / 2;
   const cx = size / 2;
-  const cy = size / 2;
-  const total = BP_CATEGORIES.length;
-  const index = BP_CATEGORIES.findIndex((item) => item.key === category.key);
+  // Deja hueco arriba para que el grosor del trazo no se recorte en el punto
+  // más alto del arco (θ = 90°, y = cy - radius).
+  const cy = radius + stroke;
+  const labelHeight = 30;
+  const height = cy + labelHeight;
 
-  // Semicircunferencia: de 180° a 360°.
-  const arc = Math.PI * radius;
-  const segment = arc / total;
-  const gap = 3;
+  const total = BP_CATEGORIES.length;
+  const activeIndex = BP_CATEGORIES.findIndex((item) => item.key === category.key);
+
+  const spanDeg = 180 / total;
+  const gapDeg = 5;
+
+  // θ = 180° es el extremo izquierdo, 90° el punto más alto, 0° el extremo
+  // derecho: recorrer de 180° a 0° traza el semicírculo superior.
+  const pointAt = (deg) => {
+    const rad = (deg * Math.PI) / 180;
+    return [cx + radius * Math.cos(rad), cy - radius * Math.sin(rad)];
+  };
+
+  const arcPath = (startDeg, endDeg) => {
+    const [x1, y1] = pointAt(startDeg);
+    const [x2, y2] = pointAt(endDeg);
+    // sweep-flag 1: cada tramo avanza en sentido horario (izquierda -> arriba -> derecha).
+    return `M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${radius.toFixed(2)} ${radius.toFixed(2)} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`;
+  };
 
   const segments = BP_CATEGORIES.map((item, position) => {
-    const active = position === index;
-    return `<circle
-      cx="${cx}" cy="${cy}" r="${radius}"
+    const startDeg = 180 - position * spanDeg + gapDeg / 2;
+    const endDeg = 180 - (position + 1) * spanDeg - gapDeg / 2;
+    const active = position === activeIndex;
+
+    return `<path
+      d="${arcPath(startDeg, endDeg)}"
       fill="none"
       style="stroke:${active ? item.color : "var(--surface-3)"};"
-      stroke-width="${active ? stroke + 2 : stroke}"
+      stroke-width="${active ? stroke + 3 : stroke}"
       stroke-linecap="round"
-      stroke-dasharray="${Math.max(segment - gap, 1)} ${arc * 2}"
-      stroke-dashoffset="${-position * segment}"
-      transform="rotate(180 ${cx} ${cy})"
     />`;
   }).join("");
 
   return `
-    <svg class="gauge" width="${size}" height="${size / 2 + 12}" viewBox="0 0 ${size} ${size / 2 + 12}" role="img"
+    <svg class="gauge" width="${size}" height="${height}" viewBox="0 0 ${size} ${height}" role="img"
          aria-label="Categoría clínica: ${escHtml(category.label)}">
       ${segments}
-      <text x="${cx}" y="${cy - 6}" text-anchor="middle" style="fill:${category.color};"
+      <text x="${cx}" y="${cy - radius * 0.32}" text-anchor="middle" style="fill:${category.color};"
             font-size="13" font-weight="700" font-family="inherit">${escHtml(category.label)}</text>
     </svg>
   `;

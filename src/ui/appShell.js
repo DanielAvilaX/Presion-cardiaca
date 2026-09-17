@@ -1,6 +1,7 @@
 import { icon } from "./icons.js";
 import { escHtml } from "../utils/html.js";
 import { toggleTheme, getActiveTheme, initTheme } from "../utils/theme.js";
+import { watchVisualViewport } from "../utils/viewport.js";
 import { authService } from "../services/authService.js";
 
 /**
@@ -125,6 +126,7 @@ function confirmLogout(modalRoot) {
  */
 export function mountShell(root, { active, title, profile = null, modalRoot = null } = {}) {
   initTheme();
+  watchVisualViewport();
 
   root.innerHTML = `
     <div class="app">
@@ -168,6 +170,7 @@ export function updateShellProfile(root, profile) {
 /** Barra de tema para pantallas sin esqueleto (login). */
 export function initStandaloneTheme() {
   initTheme();
+  watchVisualViewport();
   refreshThemeButtons();
   document.querySelectorAll(".js-theme-toggle").forEach((button) => {
     button.addEventListener("click", () => {
