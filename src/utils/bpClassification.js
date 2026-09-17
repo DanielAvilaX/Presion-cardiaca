@@ -1,14 +1,12 @@
 /**
  * Clasificacion de tension arterial segun las guias ACC/AHA 2017.
- * Todo se deriva en el frontend a partir de los datos existentes
- * (ta_systolic / ta_diastolic); no se modifica la base de datos.
+ * Todo se deriva en el frontend a partir de `ta_systolic` / `ta_diastolic`;
+ * no se guarda ninguna categoria en la base de datos.
  *
- * Categorias y colores (escala "rainbow" de la American Heart Association):
- *  - Normal              < 120 y < 80          verde
- *  - Elevada             120-129 y < 80        ambar
- *  - Hipertension 1      130-139 o 80-89       naranja
- *  - Hipertension 2      >= 140 o >= 90        naranja oscuro
- *  - Crisis hipertensiva > 180 o > 120         rojo
+ * Los colores se exponen como variables CSS (no como hex fijos) para que la
+ * misma categoria se adapte al tema claro y al oscuro. Por eso deben pintarse
+ * siempre via `style="fill: ..."` y no como atributo de presentacion de SVG,
+ * donde `var()` no es valido.
  */
 
 export const BP_CATEGORIES = [
@@ -16,52 +14,54 @@ export const BP_CATEGORIES = [
     key: "normal",
     label: "Normal",
     level: 0,
-    color: "#1f8a5b",
-    tint: "rgba(31, 138, 91, 0.12)",
-    advice: "Tu presion esta en un rango saludable."
+    range: "Menos de 120 y menos de 80",
+    color: "var(--bp-normal)",
+    tint: "var(--bp-normal-tint)",
+    advice: "Tu presión está en un rango saludable. Mantén tus hábitos."
   },
   {
     key: "elevated",
     label: "Elevada",
     level: 1,
-    color: "#d39a23",
-    tint: "rgba(211, 154, 35, 0.14)",
-    advice: "Ligeramente alta. Vigila tu estilo de vida."
+    range: "120 – 129 y menos de 80",
+    color: "var(--bp-elevated)",
+    tint: "var(--bp-elevated-tint)",
+    advice: "Ligeramente alta. Cuida la sal, el descanso y la actividad física."
   },
   {
     key: "stage1",
-    label: "Hipertension 1",
+    label: "Hipertensión 1",
     level: 2,
-    color: "#e07b1a",
-    tint: "rgba(224, 123, 26, 0.14)",
-    advice: "Hipertension etapa 1. Considera consultar a tu medico."
+    range: "130 – 139 o 80 – 89",
+    color: "var(--bp-stage1)",
+    tint: "var(--bp-stage1-tint)",
+    advice: "Hipertensión etapa 1. Conviene comentarlo con tu médico."
   },
   {
     key: "stage2",
-    label: "Hipertension 2",
+    label: "Hipertensión 2",
     level: 3,
-    color: "#d2451f",
-    tint: "rgba(210, 69, 31, 0.15)",
-    advice: "Hipertension etapa 2. Se recomienda valoracion medica."
+    range: "140 o más, u 90 o más",
+    color: "var(--bp-stage2)",
+    tint: "var(--bp-stage2-tint)",
+    advice: "Hipertensión etapa 2. Se recomienda valoración médica."
   },
   {
     key: "crisis",
     label: "Crisis",
     level: 4,
-    color: "#c01b1b",
-    tint: "rgba(192, 27, 27, 0.18)",
-    advice: "Crisis hipertensiva. Busca atencion medica de inmediato."
+    range: "Más de 180 o más de 120",
+    color: "var(--bp-crisis)",
+    tint: "var(--bp-crisis-tint)",
+    advice: "Crisis hipertensiva. Busca atención médica de inmediato."
   }
 ];
 
 const BY_KEY = Object.fromEntries(BP_CATEGORIES.map((category) => [category.key, category]));
 
 /**
- * Devuelve la categoria de tension arterial para una lectura.
- * Cuando sistolica y diastolica caen en categorias distintas, se toma la mas alta.
- * @param {number} systolic
- * @param {number} diastolic
- * @returns {{key:string,label:string,level:number,color:string,tint:string,advice:string}}
+ * Categoria de una lectura. Cuando la sistolica y la diastolica caen en
+ * categorias distintas se toma siempre la mas alta.
  */
 export function classifyBP(systolic, diastolic) {
   const sys = Number(systolic);

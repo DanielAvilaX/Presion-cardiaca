@@ -1,196 +1,168 @@
-import { formatDisplayDate } from "../utils/date.js";
-import { escHtml } from "../utils/html.js";
-import { classifyRecord } from "../utils/bpClassification.js";
-import { bpBadge } from "./components.js";
+import { createField } from "./dom.js";
 import { icon } from "./icons.js";
+import { escHtml } from "../utils/html.js";
+import { categoryScaleMarkup } from "./chart.js";
 
-export function renderSettingsHTML(profile, records) {
+/**
+ * Configuración: solo lo que es de la cuenta.
+ * Editar y eliminar mediciones vive en Historial, que es donde se buscan.
+ */
+
+const TABS = [
+  { id: "profile", label: "Perfil", icon: "user" },
+  { id: "security", label: "Seguridad", icon: "lock" },
+  { id: "data", label: "Datos", icon: "download" }
+];
+
+export function renderSettingsHTML(profile, { recordCount = 0 } = {}) {
+  const tabs = TABS.map(
+    (tab, index) =>
+      `<button class="settings-tab ${index === 0 ? "active" : ""}" data-tab="${tab.id}" type="button">${escHtml(tab.label)}</button>`
+  ).join("");
+
   return `
-    <div class="settings-section">
-      <div class="settings-tabs">
-        <button class="settings-tab active" data-tab="profile">Perfil</button>
-        <button class="settings-tab" data-tab="password">Contrasena</button>
-        <button class="settings-tab" data-tab="records">Registros</button>
+    <section class="page-head">
+      <div>
+        <h1>Configuración</h1>
+        <p class="helper">Tu perfil, tu contraseña y tus datos.</p>
       </div>
+    </section>
+
+    <div class="settings-section">
+      <div class="settings-tabs" role="tablist">${tabs}</div>
 
       <!-- Perfil -->
       <div class="settings-panel active" id="panel-profile">
         <article class="card">
-          <h3>Editar perfil</h3>
-          <p class="helper">Modifica tus datos personales.</p>
-          <div id="msg-profile" class="message-bar"></div>
-          <div class="form-grid" style="margin-top:16px;">
-            <div class="form-grid columns-2">
-              <div class="field">
-                <label for="p-firstName">Nombre</label>
-                <input id="p-firstName" type="text" value="${escHtml(profile.first_name)}" />
-              </div>
-              <div class="field">
-                <label for="p-lastName">Apellido</label>
-                <input id="p-lastName" type="text" value="${escHtml(profile.last_name)}" />
-              </div>
-            </div>
-            <div class="form-grid columns-2">
-              <div class="field">
-                <label for="p-age">Edad</label>
-                <input id="p-age" type="number" min="1" max="120" value="${profile.age}" />
-              </div>
-              <div class="field">
-                <label for="p-document">Documento</label>
-                <input id="p-document" type="text" value="${escHtml(profile.document_number)}" />
-              </div>
+          <div class="card-head">
+            <div>
+              <h3>Datos personales</h3>
+              <p class="helper">Así te identificamos dentro de la app.</p>
             </div>
           </div>
+
+          <div id="msg-profile" class="message-bar" role="status" aria-live="polite"></div>
+
+          <div class="form-grid columns-2">
+            ${createField({ id: "p-firstName", label: "Nombre", value: profile.first_name ?? "", autocomplete: "given-name" })}
+            ${createField({ id: "p-lastName", label: "Apellido", value: profile.last_name ?? "", autocomplete: "family-name" })}
+            ${createField({ id: "p-age", label: "Edad", type: "number", min: "1", max: "120", value: profile.age ?? "", inputmode: "numeric" })}
+            ${createField({ id: "p-document", label: "Documento", value: profile.document_number ?? "" })}
+          </div>
+
+          <div class="form-grid" style="margin-top:14px;">
+            <div class="field">
+              <label for="p-email">Correo electrónico</label>
+              <input id="p-email" type="email" value="${escHtml(profile.email ?? "")}" disabled />
+              <p class="field-hint">El correo de acceso no se puede cambiar desde aquí.</p>
+            </div>
+          </div>
+
           <div class="form-actions">
             <button id="save-profile" class="button" type="button">Guardar cambios</button>
           </div>
         </article>
       </div>
 
-      <!-- Contrasena -->
-      <div class="settings-panel" id="panel-password">
+      <!-- Seguridad -->
+      <div class="settings-panel" id="panel-security">
         <article class="card">
-          <h3>Cambiar contrasena</h3>
-          <p class="helper">La nueva contrasena debe tener al menos 6 caracteres.</p>
-          <div id="msg-password" class="message-bar"></div>
-          <div class="form-grid" style="margin-top:16px;">
-            <div class="field field-password">
-              <label for="p-newPass">Nueva contrasena</label>
-              <input id="p-newPass" type="password" placeholder="••••••••" autocomplete="new-password" />
-              <button type="button" class="password-toggle" data-toggle-password="p-newPass" aria-label="Mostrar contrasena">
-                ${icon("eye", { size: 18 })}
-              </button>
-            </div>
-            <div class="field field-password">
-              <label for="p-confirmPass">Confirmar contrasena</label>
-              <input id="p-confirmPass" type="password" placeholder="••••••••" autocomplete="new-password" />
-              <button type="button" class="password-toggle" data-toggle-password="p-confirmPass" aria-label="Mostrar contrasena">
-                ${icon("eye", { size: 18 })}
-              </button>
+          <div class="card-head">
+            <div>
+              <h3>Cambiar contraseña</h3>
+              <p class="helper">Debe tener al menos 6 caracteres.</p>
             </div>
           </div>
+
+          <div id="msg-password" class="message-bar" role="status" aria-live="polite"></div>
+
+          <div class="form-grid columns-2">
+            ${createField({
+              id: "p-newPass",
+              label: "Nueva contraseña",
+              type: "password",
+              placeholder: "••••••••",
+              hint: true,
+              autocomplete: "new-password"
+            })}
+            ${createField({
+              id: "p-confirmPass",
+              label: "Confirmar contraseña",
+              type: "password",
+              placeholder: "••••••••",
+              hint: true,
+              autocomplete: "new-password"
+            })}
+          </div>
+
           <div class="form-actions">
-            <button id="save-password" class="button" type="button">Actualizar contrasena</button>
+            <button id="save-password" class="button" type="button">Actualizar contraseña</button>
           </div>
         </article>
-      </div>
 
-      <!-- Registros -->
-      <div class="settings-panel" id="panel-records">
         <article class="card">
-          <h3>Mis registros</h3>
-          <p class="helper">Edita o elimina cualquier registro existente.</p>
-          <div id="msg-records" class="message-bar"></div>
-          <div class="records-table-wrap table-as-cards" style="margin-top:16px;">
-            ${renderRecordsTableHTML(records)}
+          <div class="card-head">
+            <div>
+              <h3>Sesión</h3>
+              <p class="helper">Cierra la sesión en este dispositivo.</p>
+            </div>
+          </div>
+          <div class="setting-row">
+            <div>
+              <strong>Cerrar sesión</strong>
+              <p class="helper">Tendrás que volver a entrar con tu correo y contraseña.</p>
+            </div>
+            <button class="ghost-button js-logout" type="button">${icon("logout", { size: 17 })} Cerrar sesión</button>
           </div>
         </article>
       </div>
-    </div>
-  `;
-}
 
-export function renderRecordsTableHTML(records) {
-  if (!records.length) {
-    return `<div class="empty-state">No tienes registros aun.</div>`;
-  }
+      <!-- Datos -->
+      <div class="settings-panel" id="panel-data">
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Tus datos</h3>
+              <p class="helper">Descarga todo tu historial cuando quieras.</p>
+            </div>
+          </div>
 
-  const rows = records
-    .map((rec) => {
-      const category = classifyRecord(rec);
-      return `
-      <tr>
-        <td data-label="Fecha">${formatDisplayDate(rec.record_date)}</td>
-        <td data-label="Hora">${rec.record_time.slice(0, 5)}</td>
-        <td data-label="TA">${rec.ta_systolic}/${rec.ta_diastolic}</td>
-        <td data-label="Categoria">${bpBadge(category, { compact: true })}</td>
-        <td data-label="FC">${rec.heart_rate}</td>
-        <td data-label="Posicion">${escHtml(rec.position)}</td>
-        <td data-label="Observaciones">${rec.observations ? escHtml(rec.observations) : "-"}</td>
-        <td data-label="Acciones" style="white-space:nowrap;">
-          <button class="ghost-button btn-edit-rec" data-id="${rec.id}" style="padding:8px 14px; font-size:0.85rem;" type="button">Editar</button>
-          <button class="danger-button btn-del-rec" data-id="${rec.id}" style="padding:8px 14px; font-size:0.85rem;" type="button">Eliminar</button>
-        </td>
-      </tr>
-    `;
-    })
-    .join("");
+          <div id="msg-data" class="message-bar" role="status" aria-live="polite"></div>
 
-  return `
-    <table>
-      <thead>
-        <tr>
-          <th>Fecha</th><th>Hora</th><th>TA</th><th>Categoria</th><th>FC</th><th>Posicion</th><th>Observaciones</th><th>Acciones</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
+          <div class="setting-row">
+            <div>
+              <strong>Exportar historial</strong>
+              <p class="helper">
+                ${recordCount} medición${recordCount === 1 ? "" : "es"} en formato CSV, compatible con Excel
+                y con Google Sheets.
+              </p>
+            </div>
+            <button id="export-csv" class="ghost-button" type="button">
+              ${icon("download", { size: 17 })} Descargar CSV
+            </button>
+          </div>
 
-export function renderEditFormHTML(rec) {
-  return `
-    <div class="modal" id="edit-record-modal">
-      <article class="modal-card modal-card--wizard">
-        <h3 style="margin:0;">Editar registro</h3>
-        <p class="helper">Actualiza los datos del registro del ${formatDisplayDate(rec.record_date)}.</p>
-        <div class="inline-grid-2">
-          <div class="field">
-            <label for="ef-date">Fecha</label>
-            <input id="ef-date" type="date" value="${rec.record_date}" />
+          <div class="setting-row">
+            <div>
+              <strong>Editar o eliminar mediciones</strong>
+              <p class="helper">Se hace desde el historial, donde puedes buscar la lectura exacta.</p>
+            </div>
+            <a href="history.html" class="ghost-button">Ir al historial ${icon("chevronRight", { size: 15 })}</a>
           </div>
-          <div class="field">
-            <label for="ef-time">Hora</label>
-            <input id="ef-time" type="time" value="${rec.record_time.slice(0, 5)}" />
-          </div>
-        </div>
-        <div class="inline-grid-2">
-          <div class="field">
-            <label for="ef-sys">TA Sistolica (mmHg)</label>
-            <input id="ef-sys" type="number" min="1" max="200" value="${rec.ta_systolic}" />
-          </div>
-          <div class="field">
-            <label for="ef-dia">TA Diastolica (mmHg)</label>
-            <input id="ef-dia" type="number" min="1" max="120" value="${rec.ta_diastolic}" />
-          </div>
-        </div>
-        <div class="inline-grid-2">
-          <div class="field">
-            <label for="ef-hr">Frecuencia Cardiaca (lpm)</label>
-            <input id="ef-hr" type="number" min="1" max="120" value="${rec.heart_rate}" />
-          </div>
-          <div class="field">
-            <label for="ef-pos">Posicion</label>
-            <select id="ef-pos">
-              <option ${rec.position === "Sentado" ? "selected" : ""}>Sentado</option>
-              <option ${rec.position === "Acostado" ? "selected" : ""}>Acostado</option>
-              <option ${rec.position === "De pie" ? "selected" : ""}>De pie</option>
-            </select>
-          </div>
-        </div>
-        <div class="field">
-          <label for="ef-obs">Observaciones</label>
-          <textarea id="ef-obs" placeholder="Opcional">${escHtml(rec.observations ?? "")}</textarea>
-        </div>
-        <div class="form-actions">
-          <button id="ef-cancel" class="ghost-button" type="button">Cancelar</button>
-          <button id="ef-save" class="button" type="button">Guardar cambios</button>
-        </div>
-      </article>
-    </div>
-  `;
-}
+        </article>
 
-export function renderDeleteModalHTML(rec) {
-  return `
-    <div class="confirm-delete-overlay">
-      <div class="confirm-delete-card">
-        <h3>Eliminar registro</h3>
-        <p>Esta seguro de que deseas eliminar el registro del <strong>${formatDisplayDate(rec.record_date)}</strong> a las <strong>${rec.record_time.slice(0, 5)}</strong>? Esta accion no se puede deshacer.</p>
-        <div class="confirm-delete-actions">
-          <button id="del-cancel" class="ghost-button" type="button">Cancelar</button>
-          <button id="del-confirm" class="danger-button" type="button">Eliminar</button>
-        </div>
+        <article class="card">
+          <div class="card-head">
+            <div>
+              <h3>Cómo se clasifica tu tensión</h3>
+              <p class="helper">Categorías de las guías ACC/AHA que usa la app.</p>
+            </div>
+          </div>
+          ${categoryScaleMarkup()}
+          <p class="helper" style="margin-top:14px;">
+            Esta app es una herramienta de seguimiento personal y no sustituye un diagnóstico médico.
+          </p>
+        </article>
       </div>
     </div>
   `;

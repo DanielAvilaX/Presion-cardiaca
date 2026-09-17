@@ -3,18 +3,22 @@ import { profileRepository } from "../repositories/profileRepository.js";
 import { validateRegistration } from "../utils/validation.js";
 
 export const authService = {
+  /**
+   * Devuelve el perfil del usuario y lo crea si falta.
+   *
+   * El trigger `on_auth_user_created` normalmente ya lo creó; esto cubre las
+   * cuentas anteriores al trigger o los casos en que falló.
+   */
   async ensureProfile(user) {
     let profile;
 
     try {
       profile = await profileRepository.getProfileByUserId(user.id);
     } catch (error) {
-      const shouldRecoverProfile =
+      const missingProfile =
         error.code === "PGRST116" || error.message?.toLowerCase().includes("0 rows");
 
-      if (!shouldRecoverProfile) {
-        throw error;
-      }
+      if (!missingProfile) throw error;
 
       const metadata = user.user_metadata ?? {};
 
@@ -35,26 +39,18 @@ export const authService = {
 
   async loadCurrentUser(existingSession = null) {
     const session = existingSession ?? (await authRepository.getSession());
-
-    if (!session?.user) {
-      return null;
-    }
+    if (!session?.user) return null;
 
     const profile = await this.ensureProfile(session.user);
-
-    return {
-      session,
-      user: session.user,
-      profile
-    };
+    return { session, user: session.user, profile };
   },
 
   async login(email, password) {
     if (!email.trim() || !password.trim()) {
-      throw new Error("Ingresa correo y contrasena.");
+      throw new Error("Escribe tu correo y tu contraseña.");
     }
 
-    await authRepository.signIn(email, password);
+    await authRepository.signIn(email.trim(), password);
     return this.loadCurrentUser();
   },
 
@@ -62,15 +58,12 @@ export const authService = {
     validateRegistration(formData);
 
     const result = await authRepository.signUp(
+      { email: formData.email.trim(), password: formData.password },
       {
-        email: formData.email,
-        password: formData.password
-      },
-      {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
         age: formData.age,
-        document: formData.document
+        document: formData.document.trim()
       }
     );
 
@@ -79,6 +72,27 @@ export const authService = {
     }
 
     return result;
+  },
+
+  async requestPasswordReset(email) {
+    if (!email?.trim()) {
+      throw new Error("Escribe el correo de tu cuenta.");
+    }
+
+    // Supabase devuelve al usuario a esta URL con el token de recuperación.
+    await authRepository.sendPasswordReset(email.trim(), `${window.location.origin}/index.html`);
+  },
+
+  async updatePassword(password, confirmation) {
+    if (password.length < 6) {
+      throw new Error("La contraseña debe tener al menos 6 caracteres.");
+    }
+
+    if (password !== confirmation) {
+      throw new Error("Las contraseñas no coinciden.");
+    }
+
+    await authRepository.updatePassword(password);
   },
 
   async logout() {

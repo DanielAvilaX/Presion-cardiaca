@@ -1,60 +1,83 @@
-import { createChartMarkup, bindChartTooltip } from "../ui/chart.js";
-import { distributionBar, sparkline } from "../ui/components.js";
-import { getRangeStart } from "../utils/date.js";
+import { createChartMarkup, bindChartTooltip, categoryScaleMarkup, SERIES } from "../ui/chart.js";
+import { statTile, distributionBar } from "../ui/components.js";
+import { getRangeStart, getRangeEnd, describeRange } from "../utils/date.js";
 import { averageOf, distribution } from "../utils/stats.js";
+import { createDateFromRecord } from "../utils/date.js";
 import { animateChartPaths, animateCount } from "../utils/animations.js";
+import { escHtml } from "../utils/html.js";
 
 export function createChartController({ root, rangeSelect }) {
   const visibility = { systolic: true, diastolic: true, heartRate: true };
   let allRecords = [];
+  let currentRange = "all";
 
   function filterRecords(range) {
     if (range === "all") return allRecords;
+
     const start = getRangeStart(range, "");
-    const end = new Date();
-    return allRecords.filter((rec) => {
-      const d = new Date(`${rec.record_date}T${rec.record_time}`);
-      return d >= start && d <= end;
+    const end = getRangeEnd(range, "");
+
+    return allRecords.filter((record) => {
+      const date = createDateFromRecord(record);
+      return date >= start && date <= end;
     });
   }
 
-  function summaryMarkup(filtered) {
-    const avg = averageOf(filtered);
-    const chrono = [...filtered].sort(
-      (a, b) => new Date(`${a.record_date}T${a.record_time}`) - new Date(`${b.record_date}T${b.record_time}`)
-    );
-
-    return `
-      <div class="stat-grid">
-        <article class="stat-box">
-          <span class="stat-label">Promedio sistolica</span>
-          <strong data-count="${avg.systolic}">${avg.systolic || "--"}</strong>
-          ${sparkline(chrono.map((r) => r.ta_systolic), { color: "var(--series-sys)", width: 160 })}
-        </article>
-        <article class="stat-box">
-          <span class="stat-label">Promedio diastolica</span>
-          <strong data-count="${avg.diastolic}">${avg.diastolic || "--"}</strong>
-          ${sparkline(chrono.map((r) => r.ta_diastolic), { color: "var(--series-dia)", width: 160 })}
-        </article>
-        <article class="stat-box">
-          <span class="stat-label">Promedio FC</span>
-          <strong data-count="${avg.heartRate}">${avg.heartRate || "--"}</strong>
-          ${sparkline(chrono.map((r) => r.heart_rate), { color: "var(--series-hr)", width: 160 })}
-        </article>
-      </div>
-    `;
-  }
-
-  function render(range) {
-    const filtered = filterRecords(range);
+  function render() {
+    const filtered = filterRecords(currentRange);
+    const chrono = [...filtered].sort((a, b) => createDateFromRecord(a) - createDateFromRecord(b));
+    const average = averageOf(filtered);
+    const [sys, dia, hr] = SERIES;
 
     root.innerHTML = `
-      ${summaryMarkup(filtered)}
+      <div class="stat-grid">
+        ${statTile({
+          label: "Sistólica promedio",
+          value: average.systolic,
+          unit: "mmHg",
+          series: chrono.map((record) => record.ta_systolic),
+          color: sys.color
+        })}
+        ${statTile({
+          label: "Diastólica promedio",
+          value: average.diastolic,
+          unit: "mmHg",
+          series: chrono.map((record) => record.ta_diastolic),
+          color: dia.color
+        })}
+        ${statTile({
+          label: "Frecuencia promedio",
+          value: average.heartRate,
+          unit: "lpm",
+          series: chrono.map((record) => record.heart_rate),
+          color: hr.color,
+          dashed: true
+        })}
+      </div>
+
       <article class="card">
+        <div class="card-head">
+          <div>
+            <h3>Evolución</h3>
+            <p class="helper">
+              ${filtered.length} lectura${filtered.length === 1 ? "" : "s"} en ${escHtml(describeRange(currentRange))}.
+            </p>
+          </div>
+        </div>
         ${createChartMarkup(filtered, visibility)}
-        <div>
-          <h4 style="margin:14px 0 0;">Distribucion por categoria</h4>
-          ${distributionBar(distribution(filtered), filtered.length)}
+      </article>
+
+      <article class="card">
+        <div class="card-head">
+          <div>
+            <h3>Distribución por categoría</h3>
+            <p class="helper">Cuántas lecturas cayeron en cada rango clínico.</p>
+          </div>
+        </div>
+        ${distributionBar(distribution(filtered), filtered.length)}
+        <div style="margin-top:18px; padding-top:16px; border-top:1px solid var(--line);">
+          <h4 style="margin-bottom:10px;">Referencia clínica</h4>
+          ${categoryScaleMarkup()}
         </div>
       </article>
     `;
@@ -65,27 +88,33 @@ export function createChartController({ root, rangeSelect }) {
       animateChartPaths(container);
     }
 
-    root.querySelectorAll(".stat-box strong[data-count]").forEach((el) => {
-      const value = Number(el.dataset.count);
-      if (value > 0) animateCount(el, value);
+    root.querySelectorAll(".stat-value[data-count]").forEach((element) => {
+      const value = Number(element.dataset.count);
+      if (value > 0) animateCount(element, value);
     });
 
     root.querySelectorAll(".chart-legend-item").forEach((item) => {
       item.addEventListener("click", () => {
-        visibility[item.dataset.series] = !visibility[item.dataset.series];
-        render(range);
+        const series = item.dataset.series;
+        const visible = Object.values(visibility).filter(Boolean).length;
+        if (visibility[series] && visible === 1) return;
+
+        visibility[series] = !visibility[series];
+        render();
       });
     });
-
-    // Ocultar boton expandir (ya estamos en la pagina expandida).
-    root.querySelector(".chart-expand-btn")?.remove();
   }
 
   return {
     init(records) {
       allRecords = records;
-      render(rangeSelect.value);
-      rangeSelect.addEventListener("change", () => render(rangeSelect.value));
+      currentRange = rangeSelect?.value ?? "all";
+      render();
+
+      rangeSelect?.addEventListener("change", () => {
+        currentRange = rangeSelect.value;
+        render();
+      });
     }
   };
 }

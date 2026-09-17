@@ -1,15 +1,30 @@
-import { createChartMarkup } from "./chart.js";
-import { bpBadge, trendIndicator, sparkline, distributionBar } from "./components.js";
+import { createChartMarkup, SERIES } from "./chart.js";
+import { bpBadge, statTile, distributionBar, categoryGauge, emptyState } from "./components.js";
 import { icon } from "./icons.js";
-import { formatDisplayDate } from "../utils/date.js";
+import { formatDisplayDate, formatTime, describeRange } from "../utils/date.js";
 import { escHtml } from "../utils/html.js";
 import { classifyRecord, BP_CATEGORIES } from "../utils/bpClassification.js";
-import { processRecords, DEFAULT_TABLE_STATE } from "../utils/recordsTable.js";
 
-const POSITIONS = ["Sentado", "Acostado", "De pie"];
+const RANGES = [
+  { value: "7", label: "7 días" },
+  { value: "15", label: "15 días" },
+  { value: "30", label: "1 mes" },
+  { value: "180", label: "6 meses" },
+  { value: "custom", label: "Personalizado" }
+];
 
-/** Tarjeta destacada con la lectura mas reciente. */
-function createLatestCard(records) {
+const RECENT_COUNT = 5;
+
+/** Saludo según la hora: pequeño detalle que hace la app menos impersonal. */
+function greeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return "Buenos días";
+  if (hour < 19) return "Buenas tardes";
+  return "Buenas noches";
+}
+
+/** Tarjeta de la última medición: la cifra principal de la pantalla. */
+function latestCard(records) {
   if (!records.length) return "";
 
   const latest = records[0];
@@ -17,263 +32,239 @@ function createLatestCard(records) {
 
   return `
     <article class="card latest-card" style="--cat-color:${category.color};">
-      <div class="latest-reading">
-        <span class="stat-label">Ultima medicion</span>
-        <span class="latest-value">${latest.ta_systolic}/${latest.ta_diastolic} <small>mmHg</small></span>
-        <span class="helper">${formatDisplayDate(latest.record_date)} · ${latest.record_time.slice(0, 5)} · ${latest.heart_rate} lpm</span>
+      <div class="latest-main">
+        <span class="stat-label">Última medición</span>
+        <span class="latest-value">
+          ${latest.ta_systolic}<span style="color:var(--muted); font-weight:400;">/</span>${latest.ta_diastolic}
+          <span class="unit">mmHg</span>
+        </span>
+        <div class="latest-meta">
+          <span>${escHtml(formatDisplayDate(latest.record_date))}</span>
+          <span class="dot-sep"></span>
+          <span>${escHtml(formatTime(latest.record_time))}</span>
+          <span class="dot-sep"></span>
+          <span>${latest.heart_rate} lpm</span>
+          <span class="dot-sep"></span>
+          <span>${escHtml(latest.position)}</span>
+        </div>
       </div>
-      <div class="latest-meta">
+      <div class="latest-side">
+        ${categoryGauge(category)}
         ${bpBadge(category)}
-        <p class="latest-advice">${category.advice}</p>
+        <p class="latest-advice">${escHtml(category.advice)}</p>
       </div>
     </article>
   `;
 }
 
-function createStatBox(label, value, trend, series, color) {
-  return `
-    <article class="stat-box">
-      <div class="stat-top">
-        <span class="stat-label">${label}</span>
-        ${trendIndicator(trend)}
-      </div>
-      <strong data-count="${value || 0}">${value || "--"}</strong>
-      ${sparkline(series, { color })}
-    </article>
-  `;
-}
-
-function buildInsight(stats) {
+/** Frase que interpreta el periodo, para no dejar los números solos. */
+function insight(stats, filters) {
   if (!stats.count) {
-    return `Aun no hay lecturas en este rango. Agrega una medicion para ver tus tendencias.`;
+    return `
+      <div class="insight">
+        ${icon("info", { size: 17 })}
+        <span>No hay lecturas en ${escHtml(describeRange(filters.range))}. Prueba con un periodo más amplio.</span>
+      </div>
+    `;
   }
 
   const crisis = stats.distribution.crisis || 0;
   if (crisis > 0) {
-    return `Atencion: ${crisis} lectura${crisis > 1 ? "s" : ""} en rango de crisis hipertensiva. Considera consultar a tu medico.`;
+    return `
+      <div class="insight insight--alert">
+        ${icon("alert", { size: 17 })}
+        <span>
+          <strong>${crisis} lectura${crisis > 1 ? "s" : ""} en rango de crisis hipertensiva.</strong>
+          Si se repite, consulta con tu médico.
+        </span>
+      </div>
+    `;
   }
 
   const dominant = BP_CATEGORIES.reduce((best, category) =>
     stats.distribution[category.key] > stats.distribution[best.key] ? category : best
   );
-  const count = stats.distribution[dominant.key];
-  const pct = Math.round((count / stats.count) * 100);
-  return `La mayoria de tus ${stats.count} lecturas (${pct}%) fueron <strong>${dominant.label}</strong> en este periodo.`;
-}
-
-/** Cuerpo de la tabla de registros: barra de herramientas, tabla y paginacion. */
-export function createRecordsTableSection(records, tableState) {
-  if (!records.length) {
-    return `
-      <div class="empty-state">
-        ${icon("heart", { size: 32 })}
-        <div>
-          <strong>Aun no tienes registros.</strong>
-          <p class="helper" style="margin:6px 0 0;">Agrega tu primera medicion para empezar a ver tus estadisticas y tendencias.</p>
-        </div>
-        <button id="empty-add-record" class="button button-icon" type="button">${icon("plus", { size: 18 })} Agregar primera medicion</button>
-      </div>
-    `;
-  }
-
-  const { rows, total, totalPages, page } = processRecords(records, tableState);
-
-  const positionOptions = ["all", ...POSITIONS]
-    .map((value) => `<option value="${value}" ${tableState.filterPosition === value ? "selected" : ""}>${value === "all" ? "Todas las posiciones" : value}</option>`)
-    .join("");
-
-  const categoryOptions = ["all", ...BP_CATEGORIES.map((c) => c.key)]
-    .map((value) => {
-      const label = value === "all" ? "Todas las categorias" : BP_CATEGORIES.find((c) => c.key === value).label;
-      return `<option value="${value}" ${tableState.filterCategory === value ? "selected" : ""}>${label}</option>`;
-    })
-    .join("");
-
-  const caret = (key) =>
-    tableState.sortKey === key ? `<span class="sort-caret">${tableState.sortDir === "asc" ? "▲" : "▼"}</span>` : `<span class="sort-caret">↕</span>`;
-
-  const sortedClass = (key) => (tableState.sortKey === key ? "sortable sorted" : "sortable");
+  const pct = Math.round((stats.distribution[dominant.key] / stats.count) * 100);
 
   return `
-    <div class="table-toolbar">
-      <select id="filter-position" aria-label="Filtrar por posicion">${positionOptions}</select>
-      <select id="filter-category" aria-label="Filtrar por categoria">${categoryOptions}</select>
-      <span class="helper" style="margin-left:auto;">${total} registro${total === 1 ? "" : "s"}</span>
+    <div class="insight">
+      ${icon("info", { size: 17 })}
+      <span>
+        De tus <strong>${stats.count}</strong> lecturas en ${escHtml(describeRange(filters.range))},
+        el <strong>${pct}%</strong> fueron <strong>${escHtml(dominant.label)}</strong>.
+      </span>
     </div>
-    <div class="table-wrapper table-as-cards">
-      <table>
-        <thead>
-          <tr>
-            <th class="${sortedClass("datetime")}" data-sort="datetime">Fecha / Hora ${caret("datetime")}</th>
-            <th class="${sortedClass("systolic")}" data-sort="systolic">TA ${caret("systolic")}</th>
-            <th>Categoria</th>
-            <th class="${sortedClass("heartRate")}" data-sort="heartRate">FC ${caret("heartRate")}</th>
-            <th>Posicion</th>
-            <th>Observaciones</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody>${createRows(rows)}</tbody>
-      </table>
-    </div>
-    ${totalPages > 1 ? `
-      <div class="pagination">
-        <button id="page-prev" ${page <= 1 ? "disabled" : ""} type="button">Anterior</button>
-        <span>Pagina ${page} de ${totalPages}</span>
-        <button id="page-next" ${page >= totalPages ? "disabled" : ""} type="button">Siguiente</button>
-      </div>
-    ` : ""}
   `;
 }
 
-function createRows(records) {
+/** Lista compacta de las últimas lecturas. La tabla completa vive en Historial. */
+function recentList(records) {
   if (!records.length) {
-    return `
-      <tr>
-        <td colspan="7">
-          <div class="empty-state">No hay registros que coincidan con los filtros.</div>
-        </td>
-      </tr>
-    `;
+    return emptyState({
+      iconName: "pulse",
+      title: "Aún no tienes mediciones",
+      description: "Agrega la primera y empezarás a ver tus promedios y tendencias.",
+      action: `<button id="empty-add-record" class="button" type="button">${icon("plus", { size: 17 })} Agregar medición</button>`
+    });
   }
 
-  return records
+  const rows = records
+    .slice(0, RECENT_COUNT)
     .map((record) => {
       const category = classifyRecord(record);
       return `
         <tr>
-          <td data-label="Fecha / Hora">${formatDisplayDate(record.record_date)} · ${record.record_time.slice(0, 5)}</td>
-          <td data-label="TA">${escHtml(record.taLabel ?? `${record.ta_systolic}/${record.ta_diastolic}`)}</td>
-          <td data-label="Categoria">${bpBadge(category, { compact: true })}</td>
-          <td data-label="FC">${record.heart_rate}</td>
-          <td data-label="Posicion">${escHtml(record.position)}</td>
-          <td data-label="Observaciones">${record.observations ? escHtml(record.observations) : "-"}</td>
-          <td data-label="Acciones">
-            <a href="settings.html?tab=records" class="table-link">Editar / Eliminar</a>
+          <td data-label="Fecha">
+            ${escHtml(formatDisplayDate(record.record_date))}
+            <span class="helper"> · ${escHtml(formatTime(record.record_time))}</span>
           </td>
+          <td data-label="Tensión" class="tnum"><strong>${record.ta_systolic}/${record.ta_diastolic}</strong></td>
+          <td data-label="Categoría">${bpBadge(category, { compact: true })}</td>
+          <td data-label="Pulso" class="tnum">${record.heart_rate} lpm</td>
         </tr>
       `;
     })
     .join("");
+
+  return `
+    <div class="table-as-cards">
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr><th>Fecha</th><th>Tensión</th><th>Categoría</th><th>Pulso</th></tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>
+  `;
 }
 
-export function createDashboardView({ profile, records, stats, filters, chartVisibility, tableState = DEFAULT_TABLE_STATE }) {
-  const fullName = `${profile.first_name} ${profile.last_name}`.trim();
-  const customRangeVisible = filters.range === "custom" ? "" : "hidden";
+export function createDashboardView({ profile, records, stats, filters, chartVisibility }) {
+  const firstName = (profile?.first_name ?? "").trim();
 
-  // Series cronologicas para los sparklines.
+  // Series cronológicas para las miniaturas.
   const chrono = [...stats.filtered].sort(
     (a, b) => new Date(`${a.record_date}T${a.record_time}`) - new Date(`${b.record_date}T${b.record_time}`)
   );
-  const sysSeries = chrono.map((r) => r.ta_systolic);
-  const diaSeries = chrono.map((r) => r.ta_diastolic);
-  const hrSeries = chrono.map((r) => r.heart_rate);
-
-  const RANGES = [
-    { value: "7", label: "7 dias" },
-    { value: "15", label: "15 dias" },
-    { value: "30", label: "1 mes" },
-    { value: "180", label: "6 meses" },
-    { value: "custom", label: "Personalizado" }
-  ];
 
   const rangeChips = RANGES.map(
     (range) =>
-      `<button class="range-chip ${filters.range === range.value ? "active" : ""}" data-range="${range.value}" type="button">${range.label}</button>`
+      `<button class="range-chip ${filters.range === range.value ? "active" : ""}" data-range="${range.value}" type="button"
+        aria-pressed="${filters.range === range.value}">${range.label}</button>`
   ).join("");
 
+  const [sys, dia, hr] = SERIES;
+
   return `
-    <section class="dashboard-layout">
-      <article class="panel dashboard-header">
-        <div>
-          <p class="eyebrow">Panel principal</p>
-          <h2>Hola, ${escHtml(fullName || "usuario")}.</h2>
-          <p class="helper">Consulta tus registros, agrega nuevas mediciones y sigue la evolucion de tus datos.</p>
-        </div>
-        <div class="header-actions">
-          <button id="open-record-modal" class="button button-icon" type="button">${icon("plus", { size: 18 })} Agregar registro</button>
-          <a href="settings.html" class="ghost-button button-icon" style="text-decoration:none;">${icon("settings", { size: 18 })} Configuracion</a>
-          <button id="logout-button" class="ghost-button button-icon" type="button">${icon("logout", { size: 18 })} Salir</button>
-        </div>
-      </article>
-
-      ${createLatestCard(records)}
-
-      <section class="grid">
-        <article class="card">
-          <div class="card-head">
-            <div>
-              <h3>Estadisticas</h3>
-              <p class="helper">Resumen del periodo seleccionado.</p>
-            </div>
-          </div>
-
-          <div class="range-chips" role="group" aria-label="Rango de tiempo">${rangeChips}</div>
-
-          <div id="custom-range-fields" class="range-controls ${customRangeVisible}" style="margin-top:14px;">
-            <div class="field">
-              <label for="custom-start">Fecha inicio</label>
-              <input id="custom-start" type="date" value="${filters.customStart}" />
-            </div>
-            <div class="field">
-              <label for="custom-end">Fecha fin</label>
-              <input id="custom-end" type="date" value="${filters.customEnd}" />
-            </div>
-            <button id="apply-custom-range" class="ghost-button" type="button">Aplicar rango</button>
-          </div>
-
-          <div class="insight" style="margin-top:16px;">
-            ${icon("heart", { size: 18 })}
-            <span>${buildInsight(stats)}</span>
-          </div>
-
-          <div class="stat-grid stagger">
-            ${createStatBox("Promedio sistolica", stats.averageSystolic, stats.trend?.systolic, sysSeries, "var(--series-sys)")}
-            ${createStatBox("Promedio diastolica", stats.averageDiastolic, stats.trend?.diastolic, diaSeries, "var(--series-dia)")}
-            ${createStatBox("Promedio FC", stats.averageHeartRate, stats.trend?.heartRate, hrSeries, "var(--series-hr)")}
-          </div>
-
-          ${createChartMarkup(stats.filtered, chartVisibility)}
-
-          <div>
-            <h4 style="margin:18px 0 0;">Distribucion por categoria</h4>
-            ${distributionBar(stats.distribution, stats.count)}
-          </div>
-        </article>
-
-        <article class="card">
-          <div class="card-head">
-            <div>
-              <h3>Perfil</h3>
-              <p class="helper">Datos asociados a tu cuenta.</p>
-            </div>
-            <a href="settings.html" class="ghost-button" style="text-decoration:none; font-size:0.88rem;">Editar perfil</a>
-          </div>
-          <div class="confirm-list">
-            <div><strong>Nombre</strong><span>${escHtml(fullName || "-")}</span></div>
-            <div><strong>Documento</strong><span>${escHtml(profile.document_number)}</span></div>
-            <div><strong>Edad</strong><span>${profile.age}</span></div>
-            <div><strong>Correo</strong><span>${escHtml(profile.email)}</span></div>
-          </div>
-        </article>
-      </section>
-
-      <article class="card">
-        <div class="card-head">
-          <div>
-            <h3>Tabla de registros</h3>
-            <p class="helper">Ordena por columna, filtra y navega por paginas.</p>
-          </div>
-          <button id="download-excel" class="ghost-button button-icon" type="button" style="white-space:nowrap; flex-shrink:0;">
-            ${icon("download", { size: 18 })} Descargar Excel
-          </button>
-        </div>
-        <div id="records-table-section">
-          ${createRecordsTableSection(records, tableState)}
-        </div>
-      </article>
-
-      <button id="fab-add" class="fab" type="button" aria-label="Agregar registro">${icon("plus", { size: 26, strokeWidth: 2.5 })}</button>
+    <section class="page-head">
+      <div class="greeting">
+        <h1>${greeting()}${firstName ? `, ${escHtml(firstName)}` : ""}</h1>
+        <p class="helper">Este es el resumen de tu tensión arterial.</p>
+      </div>
+      <button id="open-record-modal" class="button" type="button">
+        ${icon("plus", { size: 17 })} Agregar medición
+      </button>
     </section>
+
+    ${latestCard(records)}
+
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3>Resumen del periodo</h3>
+          <p class="helper">Promedios y evolución del rango que elijas.</p>
+        </div>
+      </div>
+
+      <div class="range-chips" role="group" aria-label="Rango de tiempo">${rangeChips}</div>
+
+      <div id="custom-range-fields" class="range-controls ${filters.range === "custom" ? "" : "hidden"}">
+        <div class="field">
+          <label for="custom-start">Desde</label>
+          <input id="custom-start" type="date" value="${escHtml(filters.customStart)}" />
+        </div>
+        <div class="field">
+          <label for="custom-end">Hasta</label>
+          <input id="custom-end" type="date" value="${escHtml(filters.customEnd)}" />
+        </div>
+        <button id="apply-custom-range" class="ghost-button" type="button">Aplicar</button>
+      </div>
+
+      <div style="margin-top:14px;">${insight(stats, filters)}</div>
+
+      <div class="stat-grid stagger" style="margin-top:14px;">
+        ${statTile({
+          label: "Sistólica",
+          value: stats.averageSystolic,
+          unit: "mmHg",
+          trend: stats.trend?.systolic,
+          series: chrono.map((record) => record.ta_systolic),
+          color: sys.color
+        })}
+        ${statTile({
+          label: "Diastólica",
+          value: stats.averageDiastolic,
+          unit: "mmHg",
+          trend: stats.trend?.diastolic,
+          series: chrono.map((record) => record.ta_diastolic),
+          color: dia.color
+        })}
+        ${statTile({
+          label: "Frecuencia",
+          value: stats.averageHeartRate,
+          unit: "lpm",
+          trend: stats.trend?.heartRate,
+          series: chrono.map((record) => record.heart_rate),
+          color: hr.color,
+          dashed: true
+        })}
+      </div>
+
+      <div style="margin-top:20px;">
+        ${createChartMarkup(stats.filtered, chartVisibility, { compact: true })}
+      </div>
+
+      <div style="margin-top:20px;">
+        <h4 style="margin-bottom:10px;">Distribución por categoría</h4>
+        ${distributionBar(stats.distribution, stats.count)}
+      </div>
+    </article>
+
+    <article class="card">
+      <div class="card-head">
+        <div>
+          <h3>Últimas mediciones</h3>
+          <p class="helper">Las ${RECENT_COUNT} más recientes de tu historial.</p>
+        </div>
+        ${
+          records.length
+            ? `<a href="history.html" class="ghost-button ghost-button--sm">Ver todo el historial ${icon("chevronRight", { size: 15 })}</a>`
+            : ""
+        }
+      </div>
+      ${recentList(records)}
+    </article>
+
+    <button id="fab-add" class="fab" type="button" aria-label="Agregar medición">
+      ${icon("plus", { size: 21, strokeWidth: 2.4 })} Agregar
+    </button>
+  `;
+}
+
+/** Esqueleto de carga: mantiene el marco mientras llegan los datos. */
+export function createDashboardSkeleton() {
+  return `
+    <div class="skeleton" style="height:34px; width:220px;"></div>
+    <article class="card"><div class="skeleton" style="height:96px;"></div></article>
+    <article class="card">
+      <div class="skeleton" style="height:42px; margin-bottom:14px;"></div>
+      <div class="stat-grid">
+        <div class="skeleton" style="height:96px;"></div>
+        <div class="skeleton" style="height:96px;"></div>
+        <div class="skeleton" style="height:96px;"></div>
+      </div>
+      <div class="skeleton" style="height:260px; margin-top:18px;"></div>
+    </article>
   `;
 }

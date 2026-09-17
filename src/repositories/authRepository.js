@@ -34,8 +34,19 @@ export const authRepository = {
     });
 
     if (error) throw error;
-
     return data;
+  },
+
+  /** Envía el correo con el enlace de recuperación. */
+  async sendPasswordReset(email, redirectTo) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw error;
+  },
+
+  /** Cambia la contraseña del usuario con sesión activa. */
+  async updatePassword(password) {
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) throw error;
   },
 
   onAuthStateChange(callback) {

@@ -2,18 +2,35 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Registra y visualiza tu tension arterial y frecuencia cardiaca con estadisticas y clasificacion clinica." />
-    <meta name="theme-color" content="#ab3b30" />
-    <title>Tension | Registro de tension cardiaca</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta
+      name="description"
+      content="Registra tu tensión arterial y tu frecuencia cardíaca, con clasificación clínica automática, estadísticas por periodo y gráficas de evolución."
+    />
+
+    <title>Tensión — Control de tensión arterial</title>
+
+    <meta name="theme-color" content="#eef4f7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b1114" media="(prefers-color-scheme: dark)" />
+
+    <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./assets/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="./assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="./assets/favicon-16.png" />
+    <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
+
+    <!-- Al añadir a la pantalla de inicio en iPhone se abre sin la barra de Safari. -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Tensión" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
     <script>
+      // Se aplica el tema antes de pintar, para que no haya un destello claro.
       (function () {
         try {
           var t = localStorage.getItem("tension-theme");
@@ -24,34 +41,11 @@
         } catch (e) {}
       })();
     </script>
+
     <link rel="stylesheet" href="./styles/main.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <div class="topbar">
-        <a class="brand" href="index.html">
-          <svg class="icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78L12 21.23l8.84-8.84a5.5 5.5 0 0 0 0-7.78z"/></svg>
-          Tension
-        </a>
-        <button class="icon-button" id="theme-toggle" type="button" aria-label="Cambiar tema"></button>
-      </div>
-
-      <header class="hero">
-        <div>
-          <p class="eyebrow">Monitoreo personal</p>
-          <h1>Tension cardiaca con seguimiento diario y estadisticas utiles.</h1>
-          <p class="hero-copy">
-            Registra, clasifica y visualiza la evolucion de tu tension arterial y frecuencia
-            cardiaca con clasificacion clinica automatica.
-          </p>
-        </div>
-      </header>
-
-      <main id="app"></main>
-
-      <footer class="app-footer">Tension · Monitoreo personal de salud cardiovascular</footer>
-    </div>
-
+    <div id="root"></div>
     <div id="modal-root"></div>
 
     <script type="module" src="./src/app.js"></script>

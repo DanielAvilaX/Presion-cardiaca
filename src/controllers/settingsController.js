@@ -1,20 +1,16 @@
 import { profileRepository } from "../repositories/profileRepository.js";
-import { recordRepository } from "../repositories/recordRepository.js";
-import { supabase } from "../config/supabase.js";
-import {
-  renderSettingsHTML,
-  renderRecordsTableHTML,
-  renderEditFormHTML,
-  renderDeleteModalHTML,
-} from "../ui/settingsView.js";
+import { authService } from "../services/authService.js";
+import { renderSettingsHTML } from "../ui/settingsView.js";
 import { bindPasswordToggles } from "../ui/dom.js";
+import { exportRecords } from "../utils/export.js";
 
-export function createSettingsController({ root, modalRoot, currentUserId }) {
-  // ── Utilidades ──────────────────────────────────────────────────────────────
+export function createSettingsController({ root, currentUserId }) {
+  let records = [];
 
-  function showMessageBar(containerId, type, text) {
-    const bar = document.querySelector(`#${containerId}`);
+  function showMessage(containerId, type, text) {
+    const bar = root.querySelector(`#${containerId}`);
     if (!bar) return;
+
     bar.className = `message-bar ${type}`;
     bar.textContent = text;
     setTimeout(() => {
@@ -23,28 +19,31 @@ export function createSettingsController({ root, modalRoot, currentUserId }) {
     }, 4000);
   }
 
-  // ── Binding de eventos ──────────────────────────────────────────────────────
-
-  function bindTabEvents() {
-    root.querySelectorAll(".settings-tab").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        root.querySelectorAll(".settings-tab").forEach((b) => b.classList.remove("active"));
-        root.querySelectorAll(".settings-panel").forEach((p) => p.classList.remove("active"));
-        btn.classList.add("active");
-        root.querySelector(`#panel-${btn.dataset.tab}`)?.classList.add("active");
+  function bindTabs() {
+    root.querySelectorAll(".settings-tab").forEach((button) => {
+      button.addEventListener("click", () => {
+        root.querySelectorAll(".settings-tab").forEach((tab) => tab.classList.remove("active"));
+        root.querySelectorAll(".settings-panel").forEach((panel) => panel.classList.remove("active"));
+        button.classList.add("active");
+        root.querySelector(`#panel-${button.dataset.tab}`)?.classList.add("active");
       });
     });
   }
 
-  function bindProfileEvents(profile) {
+  function bindProfile(profile) {
     root.querySelector("#save-profile")?.addEventListener("click", async () => {
       const firstName = root.querySelector("#p-firstName").value.trim();
       const lastName = root.querySelector("#p-lastName").value.trim();
       const age = Number(root.querySelector("#p-age").value);
-      const document_number = root.querySelector("#p-document").value.trim();
+      const documentNumber = root.querySelector("#p-document").value.trim();
 
-      if (!firstName || !lastName || !document_number || age < 1) {
-        showMessageBar("msg-profile", "error", "Completa todos los campos correctamente.");
+      if (!firstName || !lastName || !documentNumber) {
+        showMessage("msg-profile", "error", "Nombre, apellido y documento son obligatorios.");
+        return;
+      }
+
+      if (!Number.isFinite(age) || age < 1 || age > 120) {
+        showMessage("msg-profile", "error", "La edad debe estar entre 1 y 120 años.");
         return;
       }
 
@@ -54,182 +53,59 @@ export function createSettingsController({ root, modalRoot, currentUserId }) {
           first_name: firstName,
           last_name: lastName,
           age,
-          document_number,
-          email: profile.email,
+          document_number: documentNumber,
+          email: profile.email
         });
-        showMessageBar("msg-profile", "success", "Perfil actualizado correctamente.");
-      } catch (err) {
-        showMessageBar("msg-profile", "error", err.message);
+        showMessage("msg-profile", "success", "Perfil actualizado.");
+      } catch (error) {
+        showMessage("msg-profile", "error", error.message);
       }
     });
   }
 
-  function bindPasswordEvents() {
+  function bindPassword() {
     root.querySelector("#save-password")?.addEventListener("click", async () => {
-      const newPass = root.querySelector("#p-newPass").value;
-      const confirmPass = root.querySelector("#p-confirmPass").value;
-
-      if (newPass.length < 6) {
-        showMessageBar("msg-password", "error", "La contrasena debe tener al menos 6 caracteres.");
-        return;
-      }
-
-      if (newPass !== confirmPass) {
-        showMessageBar("msg-password", "error", "Las contrasenas no coinciden.");
-        return;
-      }
+      const newPassword = root.querySelector("#p-newPass");
+      const confirmPassword = root.querySelector("#p-confirmPass");
 
       try {
-        const { error } = await supabase.auth.updateUser({ password: newPass });
-        if (error) throw error;
-        root.querySelector("#p-newPass").value = "";
-        root.querySelector("#p-confirmPass").value = "";
-        showMessageBar("msg-password", "success", "Contrasena actualizada correctamente.");
-      } catch (err) {
-        showMessageBar("msg-password", "error", err.message);
+        await authService.updatePassword(newPassword.value, confirmPassword.value);
+        newPassword.value = "";
+        confirmPassword.value = "";
+        showMessage("msg-password", "success", "Contraseña actualizada.");
+      } catch (error) {
+        showMessage("msg-password", "error", error.message);
       }
     });
   }
 
-  function bindRecordEvents(records) {
-    let editingId = null;
+  function bindData() {
+    root.querySelector("#export-csv")?.addEventListener("click", () => {
+      if (!records.length) {
+        showMessage("msg-data", "error", "Todavía no tienes mediciones que exportar.");
+        return;
+      }
 
-    root.querySelectorAll(".btn-edit-rec").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = Number(btn.dataset.id);
-        const rec = records.find((r) => r.id === id);
-        if (!rec) return;
-
-        editingId = id;
-        modalRoot.innerHTML = renderEditFormHTML(rec);
-
-        const editModal = modalRoot.querySelector("#edit-record-modal");
-        editModal?.addEventListener("mousedown", (e) => {
-          if (e.target === editModal) {
-            modalRoot.innerHTML = "";
-            editingId = null;
-          }
-        });
-
-        modalRoot.querySelector("#ef-cancel")?.addEventListener("click", () => {
-          modalRoot.innerHTML = "";
-          editingId = null;
-        });
-
-        modalRoot.querySelector("#ef-save")?.addEventListener("click", async () => {
-          const payload = {
-            recordDate: modalRoot.querySelector("#ef-date").value,
-            recordTime: modalRoot.querySelector("#ef-time").value,
-            taSystolic: Number(modalRoot.querySelector("#ef-sys").value),
-            taDiastolic: Number(modalRoot.querySelector("#ef-dia").value),
-            heartRate: Number(modalRoot.querySelector("#ef-hr").value),
-            position: modalRoot.querySelector("#ef-pos").value,
-            observations: modalRoot.querySelector("#ef-obs").value,
-          };
-
-          const { taSystolic: systolic, taDiastolic: diastolic, heartRate: hr } = payload;
-
-          if (!payload.recordDate || !payload.recordTime) {
-            showMessageBar("msg-records", "error", "Fecha y hora son obligatorias.");
-            return;
-          }
-          if (systolic <= 0 || systolic > 200) {
-            showMessageBar("msg-records", "error", "TA Sistolica fuera de rango (1-200).");
-            return;
-          }
-          if (diastolic <= 0 || diastolic > 120 || diastolic >= systolic) {
-            showMessageBar("msg-records", "error", "TA Diastolica invalida (1-120, menor que sistolica).");
-            return;
-          }
-          if (hr <= 0 || hr > 120) {
-            showMessageBar("msg-records", "error", "FC fuera de rango (1-120).");
-            return;
-          }
-
-          try {
-            await recordRepository.updateRecord(editingId, currentUserId, {
-              record_date: payload.recordDate,
-              record_time: payload.recordTime,
-              ta_systolic: systolic,
-              ta_diastolic: diastolic,
-              heart_rate: hr,
-              position: payload.position,
-              observations: payload.observations?.trim() || null,
-            });
-
-            const idx = records.findIndex((r) => r.id === editingId);
-            if (idx !== -1) {
-              records[idx] = {
-                ...records[idx],
-                record_date: payload.recordDate,
-                record_time: payload.recordTime,
-                ta_systolic: systolic,
-                ta_diastolic: diastolic,
-                heart_rate: hr,
-                position: payload.position,
-                observations: payload.observations?.trim() || null,
-              };
-            }
-
-            modalRoot.innerHTML = "";
-            editingId = null;
-            root.querySelector(".records-table-wrap").innerHTML = renderRecordsTableHTML(records);
-            bindRecordEvents(records);
-            showMessageBar("msg-records", "success", "Registro actualizado correctamente.");
-          } catch (err) {
-            showMessageBar("msg-records", "error", err.message);
-          }
-        });
-      });
-    });
-
-    root.querySelectorAll(".btn-del-rec").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = Number(btn.dataset.id);
-        const rec = records.find((r) => r.id === id);
-        if (!rec) return;
-
-        modalRoot.innerHTML = renderDeleteModalHTML(rec);
-
-        const delOverlay = modalRoot.querySelector(".confirm-delete-overlay");
-        delOverlay?.addEventListener("mousedown", (e) => {
-          if (e.target === delOverlay) modalRoot.innerHTML = "";
-        });
-
-        modalRoot.querySelector("#del-cancel")?.addEventListener("click", () => {
-          modalRoot.innerHTML = "";
-        });
-
-        modalRoot.querySelector("#del-confirm")?.addEventListener("click", async () => {
-          try {
-            await recordRepository.deleteRecord(id, currentUserId);
-            modalRoot.innerHTML = "";
-
-            const idx = records.findIndex((r) => r.id === id);
-            if (idx !== -1) records.splice(idx, 1);
-
-            root.querySelector(".records-table-wrap").innerHTML = renderRecordsTableHTML(records);
-            bindRecordEvents(records);
-            showMessageBar("msg-records", "success", "Registro eliminado correctamente.");
-          } catch (err) {
-            modalRoot.innerHTML = "";
-            showMessageBar("msg-records", "error", err.message);
-          }
-        });
-      });
+      exportRecords(records);
+      showMessage("msg-data", "success", `Se descargaron ${records.length} mediciones.`);
     });
   }
 
-  // ── API pública ─────────────────────────────────────────────────────────────
-
   return {
-    render(profile, records) {
-      root.innerHTML = renderSettingsHTML(profile, records);
-      bindTabEvents();
-      bindProfileEvents(profile);
-      bindPasswordEvents();
-      bindRecordEvents(records);
+    render(profile, userRecords) {
+      records = userRecords;
+      root.innerHTML = renderSettingsHTML(profile, { recordCount: records.length });
+
+      bindTabs();
+      bindProfile(profile);
+      bindPassword();
+      bindData();
       bindPasswordToggles(root);
     },
+
+    /** Activa una pestaña por su id (para enlaces con ?tab=). */
+    activateTab(tabId) {
+      root.querySelector(`.settings-tab[data-tab="${tabId}"]`)?.click();
+    }
   };
 }

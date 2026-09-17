@@ -14,12 +14,40 @@ export const DEFAULT_TABLE_STATE = {
   page: 1,
   pageSize: 10,
   filterPosition: "all",
-  filterCategory: "all"
+  filterCategory: "all",
+  search: ""
 };
 
+/** Texto sobre el que busca el campo de búsqueda, sin acentos ni mayúsculas. */
+function searchableText(record) {
+  return [
+    record.record_date,
+    record.record_time,
+    `${record.ta_systolic}/${record.ta_diastolic}`,
+    record.ta_systolic,
+    record.ta_diastolic,
+    record.heart_rate,
+    record.position,
+    record.observations ?? "",
+    classifyRecord(record).label
+  ]
+    .join(" ")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+function normalizeQuery(query) {
+  return String(query ?? "")
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
 /**
- * Filtra, ordena y pagina los registros segun el estado de la tabla.
- * Funcion pura para poder probarla con unit tests.
+ * Filtra, busca, ordena y pagina los registros según el estado de la tabla.
+ * Función pura, para poder probarla con unit tests.
  */
 export function processRecords(records, state = {}) {
   const {
@@ -28,7 +56,8 @@ export function processRecords(records, state = {}) {
     page = 1,
     pageSize = 10,
     filterPosition = "all",
-    filterCategory = "all"
+    filterCategory = "all",
+    search = ""
   } = state;
 
   let rows = records.slice();
@@ -39,6 +68,11 @@ export function processRecords(records, state = {}) {
 
   if (filterCategory !== "all") {
     rows = rows.filter((record) => classifyRecord(record).key === filterCategory);
+  }
+
+  const query = normalizeQuery(search);
+  if (query) {
+    rows = rows.filter((record) => searchableText(record).includes(query));
   }
 
   const comparator = COMPARATORS[sortKey] ?? COMPARATORS.datetime;

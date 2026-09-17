@@ -1,47 +1,53 @@
 import { authService } from "./services/authService.js";
-import { recordRepository } from "./repositories/recordRepository.js";
+import { recordService } from "./services/recordService.js";
 import { createSettingsController } from "./controllers/settingsController.js";
-import { initTopbar } from "./ui/topbar.js";
+import { mountShell } from "./ui/appShell.js";
+import { escHtml } from "./utils/html.js";
 
-initTopbar();
-
-const root = document.querySelector("#settings-app");
+const root = document.querySelector("#root");
 const modalRoot = document.querySelector("#modal-root");
 
-function renderError(msg) {
-  root.innerHTML = `
-    <section class="panel auth-card">
-      <h2>No se pudo cargar la configuracion</h2>
-      <p class="message error">${msg ?? "Error desconocido"}</p>
-      <p class="helper">Intenta <a href="index.html">volver al panel</a>.</p>
-    </section>
-  `;
-}
+// Los enlaces antiguos apuntaban a ?tab=records, que ahora vive en Historial.
+const TAB_ALIASES = { password: "security", records: null, profile: "profile", security: "security", data: "data" };
 
 (async () => {
   try {
     const userData = await authService.loadCurrentUser();
 
     if (!userData?.user) {
-      window.location.href = "index.html";
+      window.location.replace("index.html");
       return;
     }
 
-    const [profile, records] = await Promise.all([
-      Promise.resolve(userData.profile),
-      recordRepository.getRecordsByUserId(userData.user.id),
-    ]);
-
-    const controller = createSettingsController({ root, modalRoot, currentUserId: userData.user.id });
-    controller.render(profile, records);
-
-    // Activar la pestana indicada en el URL (?tab=records, ?tab=password, ?tab=profile)
-    const tabParam = new URLSearchParams(window.location.search).get("tab");
-    if (tabParam) {
-      const tabBtn = root.querySelector(`[data-tab="${tabParam}"]`);
-      if (tabBtn) tabBtn.click();
+    const requestedTab = new URLSearchParams(window.location.search).get("tab");
+    if (requestedTab === "records") {
+      window.location.replace("history.html");
+      return;
     }
-  } catch (err) {
-    renderError(err.message);
+
+    const content = mountShell(root, {
+      active: "ajustes",
+      title: "Configuración",
+      profile: userData.profile,
+      modalRoot
+    });
+
+    const records = await recordService.getUserRecords(userData.user.id);
+
+    const controller = createSettingsController({ root: content, currentUserId: userData.user.id });
+    controller.render(userData.profile, records);
+
+    const tab = TAB_ALIASES[requestedTab];
+    if (tab) controller.activateTab(tab);
+  } catch (error) {
+    root.innerHTML = `
+      <div class="app-main"><div class="content">
+        <article class="card">
+          <h2 style="margin-bottom:6px;">No se pudo cargar la configuración</h2>
+          <p class="message error">${escHtml(error.message)}</p>
+          <p class="helper" style="margin-top:10px;"><a href="index.html">Volver al inicio</a></p>
+        </article>
+      </div></div>
+    `;
   }
 })();
